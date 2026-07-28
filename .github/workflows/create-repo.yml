@@ -1,0 +1,41 @@
+name: Automation - Create New Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: 'Name of the new repository to create'
+        required: true
+        type: string
+
+jobs:
+  create-repository:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout automation code
+        uses: actions/checkout@v4
+
+      # Mint a short-lived installation token using your GitHub App credentials
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install Dependencies
+        run: |
+          pip install PyGithub GitPython
+
+      - name: Run Repo Provisioning Script
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO_NAME: ${{ inputs.repo_name }}
+        run: |
+          python onboard-github.py

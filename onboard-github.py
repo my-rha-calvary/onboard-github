@@ -10,9 +10,23 @@ from github import Github, GithubException, Auth # From PyGithub
 # ==========================================
 ORG = "my-rha-calvary"           # Replace with your actual GitHub Org name
 TEAM_SLUG = "my-rha-cal-team"    # Replace with your team slug
+# Replace the interactive input section with:
+
 # ==========================================
 
+
 def main():
+    repo_name = os.environ.get("REPO_NAME", "").strip()
+    if not repo_name:
+        print("Error: REPO_NAME environment variable is required.")
+        sys.exit(1)
+
+    # Configure Git committer identity for GitPython
+    os.environ["GIT_COMMITTER_NAME"] = "GitHub Action"
+    os.environ["GIT_COMMITTER_EMAIL"] = "actions@github.com"
+    os.environ["GIT_AUTHOR_NAME"] = "GitHub Action"
+    os.environ["GIT_AUTHOR_EMAIL"] = "actions@github.com"
+
     # 0. Authenticate with GitHub SDK
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
