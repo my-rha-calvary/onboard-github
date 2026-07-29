@@ -159,7 +159,10 @@ jobs:
 
     local_repo.git.branch("-M", "main")
 
-    auth_https_url = github_repo.clone_url.replace("https://", f"https://{token}@")
+    os.environ["GIT_TERMINAL_PROMPT"] = "0"
+
+    # Use 'x-access-token' as the username for GitHub App installation tokens
+    auth_https_url = f"https://x-access-token:{token}@github.com/{ORG}/{repo_name}.git"
 
     remote = local_repo.create_remote("origin", auth_https_url)
     local_repo.git.push("-u", "origin", "main")
