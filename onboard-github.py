@@ -54,14 +54,14 @@ def main():
         sys.exit(1)
 
     # Prompt for the new repository name
-    try:
-        repo_name = input("Enter new repository name: ").strip()
-        if not repo_name:
-            print("Repository name cannot be empty.")
-            sys.exit(1)
-    except KeyboardInterrupt:
-        print("\nOperation cancelled.")
-        sys.exit(1)
+    # try:
+    #     repo_name = input("Enter new repository name: ").strip()
+    #     if not repo_name:
+    #         print("Repository name cannot be empty.")
+    #         sys.exit(1)
+    # except KeyboardInterrupt:
+    #     print("\nOperation cancelled.")
+    #     sys.exit(1)
 
     full_repo = f"{ORG}/{repo_name}"
 
