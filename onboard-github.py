@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from utils import copy_workflow_file
+from pathlib import Path
 import os
 import sys
 import git  # From GitPython
@@ -134,8 +135,8 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     with open(".github/CODEOWNERS", "w") as f:
         f.write(f"* @{ORG}/{team_slug}\n")
 
-
-    src_dir = f"templates/{repo_type}"
+    repo_root = Path(__file__).resolve().parent
+    src_dir = Path(repo_root / "templates" / f"{repo_type}")
     dst_dir = ".github/workflows"
     for src_path in src_dir.glob("*.yaml"):
 
