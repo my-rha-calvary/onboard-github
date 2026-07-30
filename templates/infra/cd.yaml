@@ -1,0 +1,27 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Deploy to ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      max-parallel: 1
+      matrix:
+        environment: [nonprod, prod]
+
+    environment: ${{ matrix.environment }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Multi-Env Deployment Execution
+        run: |
+          echo "Executing deployment pipeline"
+          echo "Current Target Environment: ${{{{ matrix.environment }}}}"
+          echo "Deployment initiated successfully!"
