@@ -124,40 +124,51 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     except GithubException as e:
         print(f"❌ Failed to grant access: {e.data.get('message')}")
 
-    # 2. Local File Generation
-    os.makedirs(repo_name, exist_ok=True)
-    os.chdir(repo_name)
+    repo_root = Path(__file__).resolve().parent
 
-    open(".gitignore", "w").close()
+    # 2. Define the new target directory path cleanly as a Path object
+    target_repo_dir = repo_root / repo_name
 
-    os.makedirs(".github/workflows", exist_ok=True)
-    with open(".github/CODEOWNERS", "w") as f:
+    # Create the folder for the new repository
+    target_repo_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create .gitignore directly inside the target directory
+    (target_repo_dir / ".gitignore").touch()
+
+    # Create .github directory safely
+    github_dir = target_repo_dir / ".github"
+    workflows_dir = github_dir / "workflows"
+    workflows_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write to CODEOWNERS using absolute paths
+    codeowners_path = github_dir / "CODEOWNERS"
+    with open(codeowners_path, "w", encoding="utf-8") as f:
         f.write(f"* @{ORG}/{team_slug}\n")
 
-    repo_root = Path(__file__).resolve().parent
-    src_dir = Path(repo_root / "templates" / f"{repo_type}")
-    dst_dir = Path(repo_root /".github/workflows")
-    for src_path in src_dir.glob("*.yaml"):
+    # 3. Handle Template Copying
+    src_dir = repo_root / "templates" / f"{repo_type}"
+    dst_dir = workflows_dir  # Points straight to your newly created workflows folder
 
-        # Ensure we are only reading files (skips nested folders if any)
-        if src_path.is_file():
-            # Match the exact filename for the destination
-            dst_path = dst_dir / src_path.name
+    if not src_dir.exists():
+        print(f"Error: Template source directory '{src_dir}' does not exist.")
+    else:
+        for src_path in src_dir.glob("*.yaml"):
+            if src_path.is_file():
+                dst_path = dst_dir / src_path.name
 
-            try:
-                # Read from the template
-                with open(src_path, "r", encoding="utf-8") as f_src:
-                    file_content = f_src.read()
+                try:
+                    # Read from the template
+                    with open(src_path, "r", encoding="utf-8") as f_src:
+                        file_content = f_src.read()
 
-                # Write to the workflows directory
-                with open(dst_path, "w", encoding="utf-8") as f_dst:
-                    f_dst.write(file_content)
+                    # Write to the workflows directory
+                    with open(dst_path, "w", encoding="utf-8") as f_dst:
+                        f_dst.write(file_content)
 
-                print(f"Processed: {src_path.name} -> {dst_path.name}")
+                    print(f"Processed: {src_path.name} -> {dst_path.name}")
 
-            except Exception as e:
-                print(f"Failed to process {src_path.name}: {e}")
-
+                except Exception as e:
+                    print(f"Failed to process {src_path.name}: {e}")
 
 #     print("🛠️ Templating CI workflow...")
 #     ci_workflow = f"""name: CI Pipeline ({repo_name})

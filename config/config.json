@@ -35,6 +35,11 @@
             "repo_name": "my-rha-test-7",
             "team_slug": "my-rha-cal-team",
             "repo_type": "infra"
+        },
+        {
+            "repo_name": "my-rha-test-8",
+            "team_slug": "my-rha-cal-team",
+            "repo_type": "infra"
         }
 
     ]
