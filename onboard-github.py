@@ -5,30 +5,31 @@ import os
 import sys
 import git  # From GitPython
 import json
-from github import Github, GithubException, Auth # From PyGithub
+from github import Github, GithubException, Auth  # From PyGithub
 from github.GithubException import UnknownObjectException
 
 # ==========================================
 # CONFIGURATION - CHANGE THESE VARIABLES
 # ==========================================
-ORG = "my-rha-calvary"           # Replace with your actual GitHub Org name
+ORG = "my-rha-calvary"  # Replace with your actual GitHub Org name
 REPOS = []
 TOKEN = ""
-TEAM_SLUG = "my-rha-cal-team"    # Replace with your team slug
+TEAM_SLUG = "my-rha-cal-team"  # Replace with your team slug
 # ==========================================
 
+
 def read_config(config):
-    with open(config, 'r') as file:
+    with open(config, "r") as file:
         config_data = json.load(file)
     return config_data
 
 
 def get_oganisation(config_data):
-    return (config_data.get("organisation", None))
+    return config_data.get("organisation", None)
 
 
 def get_repos(config_data):
-    return (config_data.get("repos", None))
+    return config_data.get("repos", None)
 
 
 def set_env(config):
@@ -43,7 +44,6 @@ def set_env(config):
     ORG = get_oganisation(config_data)
     REPOS = get_repos(config_data)
     TOKEN = os.environ.get("GITHUB_TOKEN")
-
 
 
 def github_auth():
@@ -75,7 +75,9 @@ def onboard_repos(auth):
         repo_team_slug = repo.get("team_slug", None)
         repo_type = repo.get("repo_type", "infra")
         if repo_name is None or repo_team_slug is None:
-            raise Exception(f"Review the configuration: {repo_name} or {repo_team_slug} cannot be None")
+            raise Exception(
+                f"Review the configuration: {repo_name} or {repo_team_slug} cannot be None"
+            )
 
         repo_exists = check_repo_exists(auth, repo_name)
         if repo_exists:
@@ -100,7 +102,9 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
         actual_team_id = team.id
         print(f"✅ Found team '{team_slug}' (ID: {actual_team_id})")
     except GithubException as e:
-        print(f"❌ Failed to find team '{team_slug}'. Make sure it exists and your token has org read access.")
+        print(
+            f"❌ Failed to find team '{team_slug}'. Make sure it exists and your token has org read access."
+        )
         sys.exit(1)
 
     full_repo = f"{ORG}/{repo_name}"
@@ -110,8 +114,8 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     try:
         github_repo = org.create_repo(
             name=repo_name,
-            private=False, #TODO set to True in CalvaryCare org.
-            auto_init=False
+            private=False,  # TODO set to True in CalvaryCare org.
+            auto_init=False,
         )
     except GithubException as e:
         print(f"Failed to create repository: {e.data.get('message')}")
@@ -171,75 +175,16 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
                     print(f"Processed: {src_path.name} -> {dst_path.name}")
                 except Exception as e:
-                    print(f"Failed to process {src_path.name}: {e}")
-
-#     print("🛠️ Templating CI workflow...")
-#     ci_workflow = f"""name: CI Pipeline ({repo_name})
-
-# on:
-#   push:
-#     branches: [ main ]
-
-# jobs:
-#   validate:
-#     name: Build & Test
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout Code
-#         uses: actions/checkout@v4
-
-#       - name: Run Diagnostics
-#         run: |
-#           echo "Validating repository: {full_repo}"
-#           echo "Running placeholder testing suites..."
-# """
-#     with open(".github/workflows/ci.yml", "w") as f:
-#         f.write(ci_workflow)
-
-#     print("🚀 Templating Multi-Environment Matrix CD workflow...")
-#     cd_workflow = f"""name: CD Pipeline ({repo_name})
-
-# on:
-#   push:
-#     branches: [ main ]
-
-# jobs:
-#   deploy:
-#     name: Deploy to ${{{{ matrix.environment }}}}
-#     runs-on: ubuntu-latest
-
-#     strategy:
-#       max-parallel: 1
-#       matrix:
-#         environment: [nonprod, prod]
-
-#     environment: ${{{{ matrix.environment }}}}
-
-#     steps:
-#       - name: Checkout Code
-#         uses: actions/checkout@v4
-
-#       - name: Multi-Env Deployment Execution
-#         run: |
-#           echo "Executing deployment pipeline step for {repo_name}"
-#           echo "Current Target Environment: ${{{{ matrix.environment }}}}"
-#           echo "Deployment initiated successfully!"
-# """
-#     with open(".github/workflows/cd.yml", "w") as f:
-#         f.write(cd_workflow)
-
+                    pri
     # 3. Git Operations via GitPython SDK
     print("📦 Initializing local Git repository and pushing via HTTPS...")
 
-    # 💥 FIX: Initialize the repository directly inside your newly created directory!
     # Convert your pathlib target_repo_dir into a string
     local_repo = git.Repo.init(str(target_repo_dir))
 
-    # 💥 FIX: Stage the files using their absolute paths so GitPython never loses track
     files_to_stage = [
         str(target_repo_dir / ".gitignore"),
-        str(target_repo_dir / ".github")
+        str(target_repo_dir / ".github"),
     ]
     local_repo.index.add(files_to_stage)
 
@@ -254,7 +199,6 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
     remote = local_repo.create_remote("origin", auth_https_url)
 
-    # 💥 FIX: Use the specific remote reference to push safely
     remote.push(refspec="main:main", set_upstream=True)
 
     print("✅ Main branch created and pushed with Matrix CI/CD workflows.")
@@ -266,14 +210,13 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
         enforce_admins=True,
         required_approving_review_count=1,
         require_code_owner_reviews=True,
-        dismiss_stale_reviews=True
+        dismiss_stale_reviews=True,
     )
 
     # 5. Create Environments via SDK underlying API
     print("🌐 Creating 'nonprod' environment...")
     github_repo._requester.requestJsonAndCheck(
-        "PUT",
-        f"{github_repo.url}/environments/nonprod"
+        "PUT", f"{github_repo.url}/environments/nonprod"
     )
 
     print("🌐 Creating 'production' environment with protections...")
@@ -285,13 +228,15 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
             "reviewers": [
                 {
                     "type": "Team",
-                    "id": actual_team_id  # Using the dynamically fetched ID!
+                    "id": actual_team_id,  # Using the dynamically fetched ID!
                 }
-            ]
-        }
+            ],
+        },
     )
 
-    print(f"🎉 Repository {repo_name} successfully automated with sequential Matrix pipelines!")
+    print(
+        f"🎉 Repository {repo_name} successfully automated with sequential Matrix pipelines!"
+    )
 
 
 def main():
