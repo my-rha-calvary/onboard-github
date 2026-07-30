@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from utils import copy_workflow_file
 import os
 import sys
 import git  # From GitPython
@@ -72,6 +73,7 @@ def onboard_repos(auth):
     for repo in repos:
         repo_name = repo.get("repo_name", None)
         repo_team_slug = repo.get("team_slug", None)
+        repo_type = repo.get("repo_type", "infra")
         if repo_name is None or repo_team_slug is None:
             raise Exception(f"Review the configuration: {repo_name} or {repo_team_slug} cannot be None")
 
@@ -80,10 +82,10 @@ def onboard_repos(auth):
             print(f"{ORG}/{repo_name} already exists - skipping ...")
             continue
 
-        onboard_repo(auth, repo_name, repo_team_slug)
+        onboard_repo(auth, repo_name, repo_type, repo_team_slug)
 
 
-def onboard_repo(auth, repo_name, team_slug):
+def onboard_repo(auth, repo_name, repo_type, team_slug):
     g = Github(auth=auth)
     try:
         org = g.get_organization(ORG)
@@ -132,61 +134,64 @@ def onboard_repo(auth, repo_name, team_slug):
     with open(".github/CODEOWNERS", "w") as f:
         f.write(f"* @{ORG}/{team_slug}\n")
 
-    print("🛠️ Templating CI workflow...")
-    ci_workflow = f"""name: CI Pipeline ({repo_name})
+    copy_workflow_file(f"templates/{repo_type}", "ci.yaml")
+    copy_workflow_file(f"templates/{repo_type}", "cd.yaml")
 
-on:
-  push:
-    branches: [ main ]
+#     print("🛠️ Templating CI workflow...")
+#     ci_workflow = f"""name: CI Pipeline ({repo_name})
 
-jobs:
-  validate:
-    name: Build & Test
-    runs-on: ubuntu-latest
+# on:
+#   push:
+#     branches: [ main ]
 
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+# jobs:
+#   validate:
+#     name: Build & Test
+#     runs-on: ubuntu-latest
 
-      - name: Run Diagnostics
-        run: |
-          echo "Validating repository: {full_repo}"
-          echo "Running placeholder testing suites..."
-"""
-    with open(".github/workflows/ci.yml", "w") as f:
-        f.write(ci_workflow)
+#     steps:
+#       - name: Checkout Code
+#         uses: actions/checkout@v4
 
-    print("🚀 Templating Multi-Environment Matrix CD workflow...")
-    cd_workflow = f"""name: CD Pipeline ({repo_name})
+#       - name: Run Diagnostics
+#         run: |
+#           echo "Validating repository: {full_repo}"
+#           echo "Running placeholder testing suites..."
+# """
+#     with open(".github/workflows/ci.yml", "w") as f:
+#         f.write(ci_workflow)
 
-on:
-  push:
-    branches: [ main ]
+#     print("🚀 Templating Multi-Environment Matrix CD workflow...")
+#     cd_workflow = f"""name: CD Pipeline ({repo_name})
 
-jobs:
-  deploy:
-    name: Deploy to ${{{{ matrix.environment }}}}
-    runs-on: ubuntu-latest
+# on:
+#   push:
+#     branches: [ main ]
 
-    strategy:
-      max-parallel: 1
-      matrix:
-        environment: [nonprod, prod]
+# jobs:
+#   deploy:
+#     name: Deploy to ${{{{ matrix.environment }}}}
+#     runs-on: ubuntu-latest
 
-    environment: ${{{{ matrix.environment }}}}
+#     strategy:
+#       max-parallel: 1
+#       matrix:
+#         environment: [nonprod, prod]
 
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+#     environment: ${{{{ matrix.environment }}}}
 
-      - name: Multi-Env Deployment Execution
-        run: |
-          echo "Executing deployment pipeline step for {repo_name}"
-          echo "Current Target Environment: ${{{{ matrix.environment }}}}"
-          echo "Deployment initiated successfully!"
-"""
-    with open(".github/workflows/cd.yml", "w") as f:
-        f.write(cd_workflow)
+#     steps:
+#       - name: Checkout Code
+#         uses: actions/checkout@v4
+
+#       - name: Multi-Env Deployment Execution
+#         run: |
+#           echo "Executing deployment pipeline step for {repo_name}"
+#           echo "Current Target Environment: ${{{{ matrix.environment }}}}"
+#           echo "Deployment initiated successfully!"
+# """
+#     with open(".github/workflows/cd.yml", "w") as f:
+#         f.write(cd_workflow)
 
     # 3. Git Operations via GitPython SDK
     print("📦 Initializing local Git repository and pushing via HTTPS...")
