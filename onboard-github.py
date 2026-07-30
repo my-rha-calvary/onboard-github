@@ -175,7 +175,7 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
                     print(f"Processed: {src_path.name} -> {dst_path.name}")
                 except Exception as e:
-                    pri
+                    print(f"Error: exception raise {e}")
     # 3. Git Operations via GitPython SDK
     print("📦 Initializing local Git repository and pushing via HTTPS...")
 

@@ -1,0 +1,51 @@
+name: "Setup Environment"
+description: "Common setup steps for OpenTofu infrastructure deployment"
+inputs:
+  aws-region:
+    description: "AWS region for deployment"
+    required: true
+    default: "ap-southeast-2"
+  aws-role-arn:
+    description: "AWS IAM role ARN to assume"
+    required: true
+  tofu-version:
+    description: "OpenTofu version to install"
+    required: false
+    default: "1.10.5"
+  aws-role-networkedge-arn:
+    description: "AWS IAM role ARN to assume from the NetworkEdge account"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS Credentials for NetworkEdge account
+      id: aws-credentials-networkedge
+      uses: Moulick/configure-multiple-aws-roles@v4
+      with:
+        role-to-assume: ${{ inputs.aws-role-networkedge-arn }}
+        aws-region: ${{ inputs.aws-region }}
+        role-session-name: GitHubActions-${{ github.run_id }}
+        profile: networkedge
+        only-profile: true
+        whoami: true
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.aws-role-arn }}
+        aws-region: ${{ inputs.aws-region }}
+        role-session-name: GitHubActions-${{ github.run_id }}
+
+    - name: Setup OpenTofu
+      uses: opentofu/setup-opentofu@v1
+      with:
+        tofu_version: ${{ inputs.tofu-version }}
+
+    - name: OpenTofu Version
+      shell: bash
+      run: tofu --version
+
+    - name: Verify AWS Identity
+      shell: bash
+      run: aws sts get-caller-identity
