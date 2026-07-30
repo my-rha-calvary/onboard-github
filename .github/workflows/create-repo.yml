@@ -32,4 +32,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
+          echo "=== Checking templates folder content ==="
+          ls -R templates/
+          echo "=== Running Python Script ==="
           python onboard-github.py
