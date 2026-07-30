@@ -137,13 +137,13 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
     repo_root = Path(__file__).resolve().parent
     src_dir = Path(repo_root / "templates" / f"{repo_type}")
-    dst_dir = ".github/workflows"
+    dst_dir = Path(repo_root /".github/workflows")
     for src_path in src_dir.glob("*.yaml"):
 
         # Ensure we are only reading files (skips nested folders if any)
         if src_path.is_file():
             # Match the exact filename for the destination
-            dst_path = f"{dst_dir}/{src_path.name}"
+            dst_path = dst_dir / src_path.name
 
             try:
                 # Read from the template
