@@ -12,6 +12,8 @@ def copy_workflow_file(src_dir, filename: str):
     try:
         # Create destination directory (and parent folders) if missing
         os.makedirs(dst_dir, exist_ok=True)
+        print(src_path)
+        print(dst_path)
 
         # Copy the file (overwrites if it already exists)
         shutil.copy(src_path, dst_path)
