@@ -70,7 +70,6 @@ def onboard_repos(auth):
     for repo in repos:
         repo_name = repo.get("repo_name", None)
         repo_team_slug = repo.get("team_slug", None)
-        breakpoint()
         if repo_name is None or repo_team_slug is None:
             raise Exception(f"Review the configuration: {repo_name} or {repo_team_slug} cannot be None")
 
