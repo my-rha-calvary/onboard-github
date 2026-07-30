@@ -12,6 +12,7 @@ from github.GithubException import UnknownObjectException
 # ==========================================
 ORG = "my-rha-calvary"           # Replace with your actual GitHub Org name
 REPOS = []
+TOKEN = ""
 TEAM_SLUG = "my-rha-cal-team"    # Replace with your team slug
 # ==========================================
 
@@ -31,7 +32,7 @@ def get_repos(config_data):
 
 def set_env(config):
     # Configure Git committer identity for GitPython
-    global ORG, REPOS
+    global ORG, REPOS, TOKEN
     config_data = read_config(config)
 
     os.environ["GIT_COMMITTER_NAME"] = "GitHub Action"
@@ -40,17 +41,18 @@ def set_env(config):
     os.environ["GIT_AUTHOR_EMAIL"] = "actions@github.com"
     ORG = get_oganisation(config_data)
     REPOS = get_repos(config_data)
+    TOKEN = os.environ.get("GITHUB_TOKEN")
+
 
 
 def github_auth():
     # 0. Authenticate with GitHub SDK
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
+    if not TOKEN:
         print("Error: Please set the GITHUB_TOKEN environment variable.")
         sys.exit(1)
 
     # g = Github(token)
-    auth = Auth.Token(token)
+    auth = Auth.Token(TOKEN)
     return auth
 
 
@@ -198,7 +200,7 @@ jobs:
     os.environ["GIT_TERMINAL_PROMPT"] = "0"
 
     # Use 'x-access-token' as the username for GitHub App installation tokens
-    auth_https_url = f"https://x-access-token:{token}@github.com/{ORG}/{repo_name}.git"
+    auth_https_url = f"https://x-access-token:{TOKEN}@github.com/{ORG}/{repo_name}.git"
 
     remote = local_repo.create_remote("origin", auth_https_url)
     local_repo.git.push("-u", "origin", "main")
