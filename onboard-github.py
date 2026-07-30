@@ -134,8 +134,30 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     with open(".github/CODEOWNERS", "w") as f:
         f.write(f"* @{ORG}/{team_slug}\n")
 
-    copy_workflow_file(f"templates/{repo_type}", "ci.yaml")
-    copy_workflow_file(f"templates/{repo_type}", "cd.yaml")
+
+    src_dir = f"templates/{repo_type}"
+    dst_dir = ".github/workflows"
+    for src_path in src_dir.glob("*.yaml"):
+
+        # Ensure we are only reading files (skips nested folders if any)
+        if src_path.is_file():
+            # Match the exact filename for the destination
+            dst_path = dst_dir / src_path.name
+
+            try:
+                # Read from the template
+                with open(src_path, "r", encoding="utf-8") as f_src:
+                    file_content = f_src.read()
+
+                # Write to the workflows directory
+                with open(dst_path, "w", encoding="utf-8") as f_dst:
+                    f_dst.write(file_content)
+
+                print(f"Processed: {src_path.name} -> {dst_path.name}")
+
+            except Exception as e:
+                print(f"Failed to process {src_path.name}: {e}")
+
 
 #     print("🛠️ Templating CI workflow...")
 #     ci_workflow = f"""name: CI Pipeline ({repo_name})
