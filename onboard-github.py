@@ -231,9 +231,18 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
     # 3. Git Operations via GitPython SDK
     print("📦 Initializing local Git repository and pushing via HTTPS...")
-    local_repo = git.Repo.init(".")
 
-    local_repo.index.add([".gitignore", ".github"])
+    # 💥 FIX: Initialize the repository directly inside your newly created directory!
+    # Convert your pathlib target_repo_dir into a string
+    local_repo = git.Repo.init(str(target_repo_dir))
+
+    # 💥 FIX: Stage the files using their absolute paths so GitPython never loses track
+    files_to_stage = [
+        str(target_repo_dir / ".gitignore"),
+        str(target_repo_dir / ".github")
+    ]
+    local_repo.index.add(files_to_stage)
+
     local_repo.index.commit("Initial commit: workflows with multi-env matrix strategy")
 
     local_repo.git.branch("-M", "main")
@@ -244,7 +253,9 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     auth_https_url = f"https://x-access-token:{TOKEN}@github.com/{ORG}/{repo_name}.git"
 
     remote = local_repo.create_remote("origin", auth_https_url)
-    local_repo.git.push("-u", "origin", "main")
+
+    # 💥 FIX: Use the specific remote reference to push safely
+    remote.push(refspec="main:main", set_upstream=True)
 
     print("✅ Main branch created and pushed with Matrix CI/CD workflows.")
 
