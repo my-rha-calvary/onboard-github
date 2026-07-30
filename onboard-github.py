@@ -136,7 +136,7 @@ def onboard_repo(auth, repo_name, team_slug):
     ci_workflow = f"""name: CI Pipeline ({repo_name})
 
 on:
-  pull_request:
+  push:
     branches: [ main ]
 
 jobs:
