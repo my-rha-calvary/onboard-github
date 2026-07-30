@@ -143,7 +143,7 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
         # Ensure we are only reading files (skips nested folders if any)
         if src_path.is_file():
             # Match the exact filename for the destination
-            dst_path = dst_dir / src_path.name
+            dst_path = f"{dst_dir}/{src_path.name}"
 
             try:
                 # Read from the template
