@@ -1,0 +1,17 @@
+{
+    "organisation": "my-rha-calvary",
+    "repos": [
+        {
+            "repo_name": "my-rha-test-1",
+            "team_slug": "my-rha-cal-team"
+        },
+        {
+            "repo_name": "my-rha-test-2",
+            "team_slug": "my-rha-cal-team"
+        },
+        {
+            "repo_name": "my-rha-test-2",
+            "team_slug": "my-rha-cal-team"
+        }
+    ]
+}

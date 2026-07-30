@@ -2,11 +2,6 @@ name: Automation - Create New Repository
 
 on:
   workflow_dispatch:
-    inputs:
-      repo_name:
-        description: 'Name of the new repository to create'
-        required: true
-        type: string
 
 jobs:
   create-repository:
@@ -36,6 +31,5 @@ jobs:
       - name: Run Repo Provisioning Script
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          REPO_NAME: ${{ inputs.repo_name }}
         run: |
           python onboard-github.py

@@ -3,30 +3,46 @@
 import os
 import sys
 import git  # From GitPython
+import json
 from github import Github, GithubException, Auth # From PyGithub
+from github.GithubException import UnknownObjectException
 
 # ==========================================
 # CONFIGURATION - CHANGE THESE VARIABLES
 # ==========================================
 ORG = "my-rha-calvary"           # Replace with your actual GitHub Org name
+REPOS = []
 TEAM_SLUG = "my-rha-cal-team"    # Replace with your team slug
-# Replace the interactive input section with:
-
 # ==========================================
 
+def read_config(config):
+    with open(config, 'r') as file:
+        config_data = json.load(file)
+    return config_data
 
-def main():
-    repo_name = os.environ.get("REPO_NAME", "").strip()
-    if not repo_name:
-        print("Error: REPO_NAME environment variable is required.")
-        sys.exit(1)
 
+def get_oganisation(config_data):
+    return (config_data.get("organisation", None))
+
+
+def get_repos(config_data):
+    return (config_data.get("repos", None))
+
+
+def set_env(config):
     # Configure Git committer identity for GitPython
+    global ORG, REPOS
+    config_data = read_config(config)
+
     os.environ["GIT_COMMITTER_NAME"] = "GitHub Action"
     os.environ["GIT_COMMITTER_EMAIL"] = "actions@github.com"
     os.environ["GIT_AUTHOR_NAME"] = "GitHub Action"
     os.environ["GIT_AUTHOR_EMAIL"] = "actions@github.com"
+    ORG = get_oganisation(config_data)
+    REPOS = get_repos(config_data)
 
+
+def github_auth():
     # 0. Authenticate with GitHub SDK
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
@@ -35,8 +51,39 @@ def main():
 
     # g = Github(token)
     auth = Auth.Token(token)
-    g = Github(auth=auth)
+    return auth
 
+
+def check_repo_exists(auth, repo_name):
+    g = Github(auth=auth)
+    try:
+        g.get_repo(f"{ORG}/{repo_name}")
+        return True
+    except UnknownObjectException:
+        return False
+    except Exception as e:
+        raise Exception(f"An unexpected error occurred: {e}")
+
+
+def onboard_repos(auth):
+    repos = REPOS
+    for repo in repos:
+        repo_name = repo.get("repo_name", None)
+        repo_team_slug = repo.get("team_slug", None)
+        breakpoint()
+        if repo_name is None or repo_team_slug is None:
+            raise Exception(f"Review the configuration: {repo_name} or {repo_team_slug} cannot be None")
+
+        repo_exists = check_repo_exists(auth, repo_name)
+        if repo_exists:
+            print(f"{ORG}/{repo_name} already exists - skipping ...")
+            continue
+
+        onboard_repo(auth, repo_name, repo_team_slug)
+
+
+def onboard_repo(auth, repo_name, team_slug):
+    g = Github(auth=auth)
     try:
         org = g.get_organization(ORG)
     except GithubException as e:
@@ -44,24 +91,14 @@ def main():
         sys.exit(1)
 
     # Automatically fetch the real Team ID based on the Slug
-    print(f"🔍 Looking up team ID for '{TEAM_SLUG}'...")
+    print(f"🔍 Looking up team ID for '{team_slug}'...")
     try:
-        team = org.get_team_by_slug(TEAM_SLUG)
+        team = org.get_team_by_slug(team_slug)
         actual_team_id = team.id
-        print(f"✅ Found team '{TEAM_SLUG}' (ID: {actual_team_id})")
+        print(f"✅ Found team '{team_slug}' (ID: {actual_team_id})")
     except GithubException as e:
-        print(f"❌ Failed to find team '{TEAM_SLUG}'. Make sure it exists and your token has org read access.")
+        print(f"❌ Failed to find team '{team_slug}'. Make sure it exists and your token has org read access.")
         sys.exit(1)
-
-    # Prompt for the new repository name
-    # try:
-    #     repo_name = input("Enter new repository name: ").strip()
-    #     if not repo_name:
-    #         print("Repository name cannot be empty.")
-    #         sys.exit(1)
-    # except KeyboardInterrupt:
-    #     print("\nOperation cancelled.")
-    #     sys.exit(1)
 
     full_repo = f"{ORG}/{repo_name}"
 
@@ -70,14 +107,14 @@ def main():
     try:
         github_repo = org.create_repo(
             name=repo_name,
-            private=False,
+            private=False, #TODO set to True in CalvaryCare org.
             auto_init=False
         )
     except GithubException as e:
         print(f"Failed to create repository: {e.data.get('message')}")
         sys.exit(1)
 
-    print(f"🔑 Granting '{TEAM_SLUG}' maintain access to {repo_name}...")
+    print(f"🔑 Granting '{team_slug}' maintain access to {repo_name}...")
     try:
         team.update_team_repository(github_repo, "maintain")
         print("✅ Access granted successfully.")
@@ -92,7 +129,7 @@ def main():
 
     os.makedirs(".github/workflows", exist_ok=True)
     with open(".github/CODEOWNERS", "w") as f:
-        f.write(f"* @{ORG}/{TEAM_SLUG}\n")
+        f.write(f"* @{ORG}/{team_slug}\n")
 
     print("🛠️ Templating CI workflow...")
     ci_workflow = f"""name: CI Pipeline ({repo_name})
@@ -133,7 +170,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        environment: [test, production]
+        environment: [nonprod, prod]
 
     environment: ${{{{ matrix.environment }}}}
 
@@ -180,16 +217,16 @@ jobs:
     )
 
     # 5. Create Environments via SDK underlying API
-    print("🌐 Creating 'test' environment...")
+    print("🌐 Creating 'nonprod' environment...")
     github_repo._requester.requestJsonAndCheck(
         "PUT",
-        f"{github_repo.url}/environments/test"
+        f"{github_repo.url}/environments/nonprod"
     )
 
     print("🌐 Creating 'production' environment with protections...")
     github_repo._requester.requestJsonAndCheck(
         "PUT",
-        f"{github_repo.url}/environments/production",
+        f"{github_repo.url}/environments/prod",
         input={
             "prevent_self_review": True,
             "reviewers": [
@@ -202,6 +239,14 @@ jobs:
     )
 
     print(f"🎉 Repository {repo_name} successfully automated with sequential Matrix pipelines!")
+
+
+def main():
+    config = "config/config.json"
+    set_env(config)
+    auth = github_auth()
+    onboard_repos(auth)
+
 
 if __name__ == "__main__":
     main()
