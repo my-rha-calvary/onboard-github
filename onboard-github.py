@@ -141,7 +141,9 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
     # Create .gitignore using absolute paths
     gitignore_path = target_repo_dir / ".gitignore"
-    gitignore_path.touch()
+    with open(gitignore_path, "w", encoding="utf-8") as f:
+        f.write("# Default gitignore template\n")
+        f.write("__pycache__/\n")
 
     # Create .github/workflows directory structure
     github_dir = target_repo_dir / ".github"
