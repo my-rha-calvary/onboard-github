@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from utils import copy_workflow_file
 from pathlib import Path
 import os
 import sys
