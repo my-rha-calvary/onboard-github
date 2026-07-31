@@ -1,98 +1,299 @@
-# Automated Repository Provisioner
+# GitHub Repository Onboarding Tool
 
-An automated, self-service tool for instantly creating and bootstrapping standardized GitHub repositories for your organization.
+## Overview
 
----
+This script automates the creation and onboarding of GitHub repositories within an organisation.
 
-## 💡 What This Automation Does
+For each repository defined in a configuration file, the tool:
 
-When a team needs a new repository, this tool handles the entire setup process in seconds—eliminating manual configuration and ensuring all organization standards, security rules, and deployment pipelines are enforced automatically.
+- Creates the GitHub repository.
+- Grants a GitHub team **Maintain** permissions.
+- Generates the initial repository structure.
+- Creates a `.gitignore`.
+- Creates a `CODEOWNERS` file.
+- Copies GitHub Actions workflow templates.
+- Initializes a local Git repository.
+- Creates and pushes the initial commit.
+- Configures branch protection for the `main` branch.
+- Creates GitHub deployment environments.
 
-### Key Benefits & Automated Features
-
-* **Instant Repository Creation**: Creates a private repository under your organization instantly.
-* **Team Access Granted**: Automatically gives your team **Maintainer** access so everyone can start collaborating immediately.
-* **Automatic Code Ownership**: Assigns code ownership (`CODEOWNERS`) to your team so pull requests are automatically routed to the right people.
-* **Pre-Built Testing & Quality Checks**: Configures an automated Validation Pipeline (CI) that tests code whenever a pull request is opened.
-* **Safe, Sequential Deployments**: Configures a Multi-Environment Pipeline (CD) that safely deploys code in sequence—testing first, then production.
-* **Protected Main Branch**: Prevents direct pushing to the main branch. All changes must go through pull requests with required team approvals.
-* **Production Guardrails**: Safeguards the production environment by requiring team review and preventing team members from self-approving production releases.
-
----
-
-## 🚀 How to Create a New Repository
-
-Any authorized team member can trigger this tool directly from GitHub:
-
-1. Go to the **Actions** tab in this repository.
-2. Select **Automation - Create New Repository** from the left sidebar.
-3. Click the **Run workflow** dropdown button on the right.
-4. Enter the **Repository Name** you wish to create.
-5. Click **Run workflow**.
-
-Within 1–2 minutes, your new repository will be created, configured, and ready for development.
+The goal is to standardise new repositories and ensure they follow organisational governance from day one.
 
 ---
 
-## ⚙️ Organization Setup Guide (One-Time Setup)
+# Features
 
-To allow this workflow to create repositories and manage settings on behalf of your organization securely, a **GitHub App** must be set up. Follow these step-by-step instructions.
-
-### Step 1: Create the GitHub App
-
-1. Go to your Organization Settings:
-   `https://github.com/organizations/YOUR_ORG_NAME/settings/apps`
-2. Click **New GitHub App**.
-3. Configure basic information:
-   * **GitHub App name**: `Org Repo Provisioner` (or your preferred name)
-   * **Homepage URL**: `https://github.com/YOUR_ORG_NAME`
-4. Under **Webhook**, uncheck **Active** (no webhooks needed).
+- Automated GitHub repository creation
+- Team permission assignment
+- Standard repository bootstrap
+- GitHub Actions workflow templating
+- Automatic CODEOWNERS generation
+- Initial Git commit and push
+- Main branch protection
+- Creation of deployment environments
+- Configuration-driven onboarding
 
 ---
 
-### Step 2: Configure Required Permissions
+# Repository Structure
 
-Scroll down to **Permissions** and set the following:
+```
+.
+├── config/
+│   └── config.json
+├── templates/
+│   ├── infra/
+│   ├── application/
+│   └── ...
+├── onboard.py
+└── README.md
+```
 
-#### **Repository Permissions**
-| Permission | Access | Purpose |
-| :--- | :--- | :--- |
-| **Administration** | **Read & write** | Creates repositories and branch protection rules |
-| **Contents** | **Read & write** | Pushes initial project files and commits |
-| **Environments** | **Read & write** | Creates test and production deployment targets |
-| **Workflows** | **Read & write** | Manages CI/CD pipeline definition files |
-
-#### **Organization Permissions**
-| Permission | Access | Purpose |
-| :--- | :--- | :--- |
-| **Members** | **Read-only** | Automatically looks up team IDs by team slug |
-
-Click **Create GitHub App** at the bottom of the page.
+The **templates** directory contains workflow templates that are copied into each newly created repository.
 
 ---
 
-### Step 3: Install the App in Your Organization
+# Prerequisites
 
-1. After creation, click **Install App** on the left sidebar.
-2. Click **Install** next to your organization name.
-3. Select **All repositories** (allows managing organization-wide settings and new repos).
-4. Click **Install**.
+- Python 3.10+
+- Git installed
+- GitHub Personal Access Token (PAT) or GitHub App token
+- Access to the target GitHub organisation
 
----
+Python packages:
 
-### Step 4: Generate App Credentials
-
-1. Go back to your App's **General** settings tab.
-2. Copy the **App ID** (a sequence of numbers near the top).
-3. Scroll down to the **Private keys** section and click **Generate a private key**.
-4. A `.pem` key file will download to your computer.
+```bash
+pip install GitPython PyGithub
+```
 
 ---
 
-### Step 5: Save Secrets in GitHub Actions
+# GitHub Token Permissions
 
-Convert the private key file into a single line using Base64 encoding to prevent line-break formatting errors:
+The token used by this script should have permissions to:
 
-* **Mac / Linux Terminal**:
-  ```bash
-  base64 -i your-app-key.pem
+- Create repositories
+- Read organisation information
+- Read teams
+- Manage repository permissions
+- Configure branch protection
+- Create deployment environments
+
+The token must be exported before running the script.
+
+Example:
+
+```bash
+export GITHUB_TOKEN=<your-token>
+```
+
+or on Windows
+
+```powershell
+$env:GITHUB_TOKEN="<your-token>"
+```
+
+---
+
+# Configuration
+
+Repository onboarding is driven by `config/config.json`.
+
+Example:
+
+```json
+{
+  "organisation": "my-org",
+  "repos": [
+    {
+      "repo_name": "terraform-network",
+      "repo_type": "infra",
+      "team_slug": "platform-team"
+    },
+    {
+      "repo_name": "application-api",
+      "repo_type": "application",
+      "team_slug": "backend-team"
+    }
+  ]
+}
+```
+
+## Configuration Fields
+
+| Field | Description |
+|--------|-------------|
+| organisation | GitHub organisation name |
+| repo_name | Repository name |
+| repo_type | Template folder under `templates/` |
+| team_slug | GitHub team to grant Maintain access |
+
+---
+
+# Template Structure
+
+Each repository type has its own template folder.
+
+Example:
+
+```
+templates/
+├── infra/
+│   ├── build.yaml
+│   └── deploy.yaml
+│
+├── application/
+│   ├── build.yaml
+│   └── release.yaml
+```
+
+All `.yaml` files are copied into:
+
+```
+.github/workflows/
+```
+
+inside the newly created repository.
+
+---
+
+# Generated Repository
+
+Each repository will contain:
+
+```
+.
+├── .github
+│   ├── CODEOWNERS
+│   └── workflows
+│       ├── build.yaml
+│       └── deploy.yaml
+└── .gitignore
+```
+
+---
+
+# Branch Protection
+
+The script automatically configures protection on the `main` branch.
+
+Settings include:
+
+- Require pull request reviews
+- Require one approval
+- Require CODEOWNER reviews
+- Dismiss stale approvals
+- Enforce rules for administrators
+
+---
+
+# Deployment Environments
+
+The following GitHub environments are created automatically.
+
+## nonprod
+
+Standard deployment environment.
+
+## prod
+
+Production environment configured with:
+
+- Required reviewers
+- Prevent self-review
+
+---
+
+# Running the Script
+
+Run:
+
+```bash
+python onboard.py
+```
+
+The script will:
+
+1. Read the configuration.
+2. Authenticate with GitHub.
+3. Check whether each repository already exists.
+4. Create missing repositories.
+5. Bootstrap the repository.
+6. Push the initial commit.
+7. Configure repository governance.
+
+---
+
+# Workflow
+
+```
+Read config
+      │
+      ▼
+Authenticate to GitHub
+      │
+      ▼
+Repository exists?
+      │
+ ┌────┴────┐
+ │         │
+Yes        No
+ │         │
+Skip    Create repository
+             │
+             ▼
+Assign team permissions
+             │
+             ▼
+Generate repository files
+             │
+             ▼
+Copy workflow templates
+             │
+             ▼
+Initial Git commit
+             │
+             ▼
+Push to GitHub
+             │
+             ▼
+Configure branch protection
+             │
+             ▼
+Create deployment environments
+             │
+             ▼
+Complete
+```
+
+---
+
+# Notes
+
+- Existing repositories are skipped.
+- Repository names must be unique within the organisation.
+- The configured GitHub team must already exist.
+- Workflow templates are copied from the directory matching the configured `repo_type`.
+
+---
+
+# Future Enhancements
+
+Potential improvements include:
+
+- Configurable branch protection policies
+- Repository topics
+- Repository description
+- Default labels
+- Secrets and variables
+- Repository rulesets
+- Dependabot configuration
+- License templates
+- README templates
+- Issue templates
+- Pull request templates
+- Template repositories
+- Better logging
+- Dry-run mode
+- Parallel repository creation
+- Unit tests

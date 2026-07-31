@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""
+Automates the creation and onboarding of GitHub repositories.
+
+This script creates repositories, assigns team permissions, generates
+the initial repository structure, copies CI/CD workflow templates,
+initialises Git, pushes the first commit, configures branch protection,
+and creates deployment environments based on a JSON configuration file.
+"""
 
 from pathlib import Path
 import os
@@ -14,26 +22,60 @@ from github.GithubException import UnknownObjectException
 ORG = "my-rha-calvary"  # Replace with your actual GitHub Org name
 REPOS = []
 TOKEN = ""
-TEAM_SLUG = "my-rha-cal-team"  # Replace with your team slug
 # ==========================================
 
 
 def read_config(config):
+    """
+    Read and parse the JSON configuration file.
+
+    Args:
+        config (str): Path to the configuration file.
+
+    Returns:
+        dict: Parsed configuration data.
+    """
     with open(config, "r") as file:
         config_data = json.load(file)
     return config_data
 
 
 def get_oganisation(config_data):
+    """
+    Retrieve the GitHub organisation name from the configuration.
+
+    Args:
+        config_data (dict): Parsed configuration data.
+
+    Returns:
+        str | None: GitHub organisation name, or None if not defined.
+    """
     return config_data.get("organisation", None)
 
-
 def get_repos(config_data):
+    """
+    Retrieve the list of repositories to be onboarded.
+
+    Args:
+        config_data (dict): Parsed configuration data.
+
+    Returns:
+        list | None: List of repository definitions, or None if not configured.
+    """
     return config_data.get("repos", None)
 
 
 def set_env(config):
-    # Configure Git committer identity for GitPython
+    """
+    Initialise the execution environment.
+
+    Reads the configuration file, configures Git author/committer
+    environment variables, and populates the global organisation,
+    repository list, and GitHub token.
+
+    Args:
+        config (str): Path to the configuration file.
+    """
     global ORG, REPOS, TOKEN
     config_data = read_config(config)
 
@@ -47,7 +89,15 @@ def set_env(config):
 
 
 def github_auth():
-    # 0. Authenticate with GitHub SDK
+    """
+    Authenticate with GitHub using the GITHUB_TOKEN environment variable.
+
+    Returns:
+        github.Auth.Token: Authentication object used by the GitHub SDK.
+
+    Raises:
+        SystemExit: If the GITHUB_TOKEN environment variable is not set.
+    """
     if not TOKEN:
         print("Error: Please set the GITHUB_TOKEN environment variable.")
         sys.exit(1)
@@ -58,6 +108,19 @@ def github_auth():
 
 
 def check_repo_exists(auth, repo_name):
+    """
+    Check whether a GitHub repository already exists.
+
+    Args:
+        auth (github.Auth.Token): GitHub authentication object.
+        repo_name (str): Repository name.
+
+    Returns:
+        bool: True if the repository exists, otherwise False.
+
+    Raises:
+        Exception: If an unexpected error occurs while querying GitHub.
+    """
     g = Github(auth=auth)
     try:
         g.get_repo(f"{ORG}/{repo_name}")
@@ -69,6 +132,18 @@ def check_repo_exists(auth, repo_name):
 
 
 def onboard_repos(auth):
+    """
+    Onboard all repositories defined in the configuration.
+
+    Each repository is validated, checked for existence, and created
+    if it does not already exist.
+
+    Args:
+        auth (github.Auth.Token): GitHub authentication object.
+
+    Raises:
+        Exception: If a repository configuration is invalid.
+    """
     repos = REPOS
     for repo in repos:
         repo_name = repo.get("repo_name", None)
@@ -86,8 +161,29 @@ def onboard_repos(auth):
 
         onboard_repo(auth, repo_name, repo_type, repo_team_slug)
 
-
+#TODO create functions: create folders/copy
 def onboard_repo(auth, repo_name, repo_type, team_slug):
+    """
+    Create and initialise a GitHub repository.
+
+    This function performs the complete repository onboarding process:
+    - Creates the repository.
+    - Grants team permissions.
+    - Generates the local repository structure.
+    - Copies workflow templates.
+    - Creates the initial Git commit and pushes it.
+    - Applies branch protection rules.
+    - Creates GitHub deployment environments.
+
+    Args:
+        auth (github.Auth.Token): GitHub authentication object.
+        repo_name (str): Name of the repository to create.
+        repo_type (str): Repository template type used to select workflow templates.
+        team_slug (str): GitHub team slug to grant maintain permissions.
+
+    Raises:
+        SystemExit: If a GitHub API operation fails.
+    """
     g = Github(auth=auth)
     try:
         org = g.get_organization(ORG)
@@ -95,7 +191,6 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
         print(f"Failed to access organization '{ORG}': {e.data.get('message')}")
         sys.exit(1)
 
-    # Automatically fetch the real Team ID based on the Slug
     print(f"🔍 Looking up team ID for '{team_slug}'...")
     try:
         team = org.get_team_by_slug(team_slug)
@@ -109,7 +204,7 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
     full_repo = f"{ORG}/{repo_name}"
 
-    # 1. Create Repository via GitHub SDK
+    # Create Repository via GitHub SDK
     print(f"🚀 Creating repository: {full_repo}...")
     try:
         github_repo = org.create_repo(
@@ -130,16 +225,13 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
     repo_root = Path(__file__).resolve().parent
 
-    # 2. Define the new target directory path cleanly as a Path object
-    # --- 1. SETUP PATHS ---
-    # Get the absolute root where the script lives
+    # Define the new target directory path cleanly as a Path object
     repo_root = Path(__file__).resolve().parent
 
     # Define the template source and destination repo paths
     src_dir = repo_root / "templates" / f"{repo_type}"
     target_repo_dir = repo_root / repo_name
 
-    # --- 2. GENERATE LOCAL FILES ---
     # Create the folder for the new repository
     target_repo_dir.mkdir(parents=True, exist_ok=True)
 
@@ -159,7 +251,7 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     with open(codeowners_path, "w", encoding="utf-8") as f:
         f.write(f"* @{ORG}/{team_slug}\n")
 
-    # --- 3. COPY THE TEMPLATES ---
+    # Copy the Templates
     if not src_dir.exists():
         print(f"Error: Template source directory '{src_dir}' does not exist.")
     else:
@@ -175,11 +267,11 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
                     print(f"Processed: {src_path.name} -> {dst_path.name}")
                 except Exception as e:
-                    pri
-    # 3. Git Operations via GitPython SDK
+                    print(f"Error: exception raise {e}")
+
+    # Git Operations via GitPython SDK
     print("📦 Initializing local Git repository and pushing via HTTPS...")
 
-    # Convert your pathlib target_repo_dir into a string
     local_repo = git.Repo.init(str(target_repo_dir))
 
     files_to_stage = [
@@ -187,23 +279,18 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
         str(target_repo_dir / ".github"),
     ]
     local_repo.index.add(files_to_stage)
-
     local_repo.index.commit("Initial commit: workflows with multi-env matrix strategy")
-
     local_repo.git.branch("-M", "main")
-
     os.environ["GIT_TERMINAL_PROMPT"] = "0"
 
     # Use 'x-access-token' as the username for GitHub App installation tokens
     auth_https_url = f"https://x-access-token:{TOKEN}@github.com/{ORG}/{repo_name}.git"
-
     remote = local_repo.create_remote("origin", auth_https_url)
-
     remote.push(refspec="main:main", set_upstream=True)
 
     print("✅ Main branch created and pushed with Matrix CI/CD workflows.")
 
-    # 4. Apply Main Branch Protection Rules via GitHub SDK
+    # Apply Main Branch Protection Rules via GitHub SDK
     print("🔒 Applying branch protection rules to 'main'...")
     main_branch = github_repo.get_branch("main")
     main_branch.edit_protection(
@@ -213,7 +300,7 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
         dismiss_stale_reviews=True,
     )
 
-    # 5. Create Environments via SDK underlying API
+    # Create Environments via SDK underlying API
     print("🌐 Creating 'nonprod' environment...")
     github_repo._requester.requestJsonAndCheck(
         "PUT", f"{github_repo.url}/environments/nonprod"
@@ -240,6 +327,12 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
 
 def main():
+    """
+    Entry point for the repository onboarding script.
+
+    Loads the configuration, authenticates with GitHub,
+    and onboards all configured repositories.
+    """
     config = "config/config.json"
     set_env(config)
     auth = github_auth()
