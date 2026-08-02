@@ -228,6 +228,12 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     # Define the new target directory path cleanly as a Path object
     repo_root = Path(__file__).resolve().parent
 
+# Define the new target directory path cleanly as a Path object
+    repo_root = Path(__file__).resolve().parent
+
+    # Define the actions.yaml source and destination repo paths
+    src_dir_actions = repo_root / "templates/actions/setup-environment"
+
     # Define the template source and destination repo paths
     src_dir = repo_root / "templates" / f"{repo_type}"
     target_repo_dir = repo_root / repo_name
@@ -241,17 +247,20 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
         f.write("# Default gitignore template\n")
         f.write("__pycache__/\n")
 
-    # Create .github/workflows directory structure
+    # Create .github/workflows and .github/actions/setup-environment directories
     github_dir = target_repo_dir / ".github"
     workflows_dir = github_dir / "workflows"
     workflows_dir.mkdir(parents=True, exist_ok=True)
+
+    actions_dir = github_dir / "actions" / "setup-environment"
+    actions_dir.mkdir(parents=True, exist_ok=True)
 
     # Write to CODEOWNERS using absolute paths
     codeowners_path = github_dir / "CODEOWNERS"
     with open(codeowners_path, "w", encoding="utf-8") as f:
         f.write(f"* @{ORG}/{team_slug}\n")
 
-    # Copy the Templates
+    # Copy Workflow Templates
     if not src_dir.exists():
         print(f"Error: Template source directory '{src_dir}' does not exist.")
     else:
@@ -259,15 +268,23 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
             if src_path.is_file():
                 dst_path = workflows_dir / src_path.name
                 try:
-                    with open(src_path, "r", encoding="utf-8") as f_src:
-                        file_content = f_src.read()
-
-                    with open(dst_path, "w", encoding="utf-8") as f_dst:
-                        f_dst.write(file_content)
-
-                    print(f"Processed: {src_path.name} -> {dst_path.name}")
+                    dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
+                    print(f"Processed Workflow: {src_path.name} -> {dst_path.name}")
                 except Exception as e:
-                    print(f"Error: exception raise {e}")
+                    print(f"Error processing workflow {src_path.name}: {e}")
+
+    # Copy Action Templates (setup-environment)
+    if not src_dir_actions.exists():
+        print(f"Error: Action source directory '{src_dir_actions}' does not exist.")
+    else:
+        for src_path in src_dir_actions.glob("*.yaml"):
+            if src_path.is_file():
+                dst_path = actions_dir / src_path.name
+                try:
+                    dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
+                    print(f"Processed Action: {src_path.name} -> {dst_path.name}")
+                except Exception as e:
+                    print(f"Error processing action {src_path.name}: {e}")
 
     # Git Operations via GitPython SDK
     print("📦 Initializing local Git repository and pushing via HTTPS...")
