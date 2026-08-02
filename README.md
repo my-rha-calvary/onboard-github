@@ -42,6 +42,7 @@ The goal is to standardise new repositories and ensure they follow organisationa
 ├── config/
 │   └── config.json
 ├── templates/
+│   ├── actions/setup-environment/actions.yaml
 │   ├── infra/
 │   ├── application/
 │   └── ...
