@@ -234,6 +234,9 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     # Define the actions.yaml source and destination repo paths
     src_dir_actions = repo_root / "templates/actions/setup-environment"
 
+    # Define the common actions folder
+    src_dir_common = repo_root / "templates/common"
+
     # Define the template source and destination repo paths
     src_dir = repo_root / "templates" / f"{repo_type}"
     target_repo_dir = repo_root / repo_name
@@ -273,6 +276,20 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
                 except Exception as e:
                     print(f"Error processing workflow {src_path.name}: {e}")
 
+    # Copy Common Workflow Templates
+    if not src_dir_common.exists():
+        print(f"Error: Common Template source directory '{src_dir_common}' does not exist.")
+    else:
+        for src_path in src_dir_common.glob("*.yaml"):
+            if src_path.is_file():
+                dst_path = workflows_dir / src_path.name
+                try:
+                    dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
+                    print(f"Processed Workflow: {src_path.name} -> {dst_path.name}")
+                except Exception as e:
+                    print(f"Error processing workflow {src_path.name}: {e}")
+
+
     # Copy Action Templates (setup-environment)
     if not src_dir_actions.exists():
         print(f"Error: Action source directory '{src_dir_actions}' does not exist.")
@@ -285,6 +302,20 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
                     print(f"Processed Action: {src_path.name} -> {dst_path.name}")
                 except Exception as e:
                     print(f"Error processing action {src_path.name}: {e}")
+
+    # Define PR template paths
+    src_pr_template = repo_root / "templates" / "PULL_REQUEST_TEMPLATE.md"
+    dst_pr_template = github_dir / "PULL_REQUEST_TEMPLATE.md"
+
+    # Copy single PR Template
+    if src_pr_template.exists():
+        try:
+            dst_pr_template.write_text(src_pr_template.read_text(encoding="utf-8"), encoding="utf-8")
+            print(f"Processed PR Template: {src_pr_template.name} -> {dst_pr_template.name}")
+        except Exception as e:
+            print(f"Error processing PR template: {e}")
+    else:
+        print(f"Warning: PR template source '{src_pr_template}' does not exist.")
 
     # Git Operations via GitPython SDK
     print("📦 Initializing local Git repository and pushing via HTTPS...")
