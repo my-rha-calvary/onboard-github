@@ -277,7 +277,21 @@ Complete
 - Workflow templates are copied from the directory matching the configured `repo_type`.
 
 ---
+# Pre-commit Installation & Setup
 
+Once repository is cloned, best practices is to installed `pre-commit` and `pre-commit` hooks
+
+```bash
+# 1. Install pre-commit
+pip install pre-commit  # or `brew install pre-commit`
+
+# 2. Enable git hook scripts
+pre-commit install
+
+# 3. (Optional) Run checks against all files manually
+pre-commit run --all-files
+
+---
 # Future Enhancements
 
 Potential improvements include:

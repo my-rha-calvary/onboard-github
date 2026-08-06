@@ -241,7 +241,11 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     src_dir = repo_root / "templates" / f"{repo_type}"
     target_repo_dir = repo_root / repo_name
 
-    # Create the folder for the new repository
+    # Define .precommit template paths
+    src_precommit = repo_root / "templates" / ".pre-commit-config.yaml"
+    dst_precommit = target_repo_dir / ".pre-commit-config.yaml"
+
+        # Create the folder for the new repository
     target_repo_dir.mkdir(parents=True, exist_ok=True)
 
     # Create .gitignore using absolute paths
@@ -316,6 +320,17 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
             print(f"Error processing PR template: {e}")
     else:
         print(f"Warning: PR template source '{src_pr_template}' does not exist.")
+
+    # Copy .precommit to target repository root
+    if src_precommit.exists():
+        try:
+            dst_precommit.write_text(src_precommit.read_text(encoding="utf-8"), encoding="utf-8")
+            print(f"Processed Root File: {src_precommit.name} -> {dst_precommit.name}")
+        except Exception as e:
+            print(f"Error copying pre-commit template: {e}")
+    else:
+        print(f"Warning: Pre-commit template missing at '{src_precommit}'")
+
 
     # Git Operations via GitPython SDK
     print("📦 Initializing local Git repository and pushing via HTTPS...")
