@@ -8,60 +8,63 @@ For each repository defined in a configuration file, the tool:
 
 - Creates the GitHub repository.
 - Grants a GitHub team **Maintain** permissions.
-- Generates the initial repository structure.
-- Creates a `.gitignore`.
-- Creates a `CODEOWNERS` file.
-- Copies GitHub Actions workflow templates.
-- Initializes a local Git repository.
-- Creates and pushes the initial commit.
-- Configures branch protection for the `main` branch.
-- Creates GitHub deployment environments.
+- Generates the local repository structure.
+- Creates `.gitignore`, `.pre-commit-config.yaml`, and `CODEOWNERS` files.
+- Copies GitHub Actions workflow templates (repo-type specific & common workflows).
+- Copies GitHub composite actions (e.g. `setup-environment`).
+- Copies PR template (`PULL_REQUEST_TEMPLATE.md`).
+- Initialises a local Git repository, commits, and pushes the `main` branch.
+- Configures branch protection rules for the `main` branch.
+- Creates GitHub deployment environments (`nonprod` and `prod`).
 
 The goal is to standardise new repositories and ensure they follow organisational governance from day one.
 
 ---
 
-# Features
+## Features
 
-- Automated GitHub repository creation
-- Team permission assignment
-- Standard repository bootstrap
-- GitHub Actions workflow templating
-- Automatic CODEOWNERS generation
-- Initial Git commit and push
-- Main branch protection
-- Creation of deployment environments
-- Configuration-driven onboarding
+- **Automated Repository Provisioning**: Create public/private repos dynamically under your GitHub organisation.
+- **Team Access Management**: Automatically assign Maintain access to specified team slugs.
+- **Template-Based Scaffolding**: Modular copying of CI/CD workflows, composite actions, PR templates, and pre-commit configurations based on `repo_type`.
+- **Governance Controls**: Automatic `CODEOWNERS` file creation targeting assigned teams.
+- **Branch Protection**: Automatic setup of pull request review requirements, approval counts, code owner review requirements, and administrator enforcement.
+- **Deployment Environments**: Automated setup of `nonprod` and `prod` environments with reviewer protections.
 
 ---
 
-# Repository Structure
+## Repository Structure
 
 ```
 .
 ├── config/
 │   └── config.json
 ├── templates/
-│   ├── actions/setup-environment/actions.yaml
+│   ├── actions/
+│   │   └── setup-environment/
+│   │       └── actions.yaml
+│   ├── common/
+│   │   └── pr_title_check.yaml
 │   ├── infra/
+│   │   └── ...
 │   ├── application/
-│   └── ...
-├── onboard.py
+│   │   └── ...
+│   ├── .pre-commit-config.yaml
+│   └── PULL_REQUEST_TEMPLATE.md
+├── onboard-github.py
 └── README.md
 ```
 
-The **templates** directory contains workflow templates that are copied into each newly created repository.
-
 ---
 
-# Prerequisites
+## Prerequisites
 
-- Python 3.10+
-- Git installed
-- GitHub Personal Access Token (PAT) or GitHub App token
-- Access to the target GitHub organisation
+- **Python**: 3.10+
+- **Git**: Installed and available in environment PATH
+- **GitHub Token**: Personal Access Token (PAT) or GitHub App token with Organization & Repository Management permissions
 
-Python packages:
+### Python Dependencies
+
+Install required libraries via pip:
 
 ```bash
 pip install GitPython PyGithub
@@ -69,42 +72,31 @@ pip install GitPython PyGithub
 
 ---
 
-# GitHub Token Permissions
+## GitHub Token Permissions
 
-The token used by this script should have permissions to:
-
-- Create repositories
-- Read organisation information
-- Read teams
-- Manage repository permissions
-- Configure branch protection
-- Create deployment environments
-
-The token must be exported before running the script.
-
-Example:
+Set the `GITHUB_TOKEN` environment variable prior to running the script:
 
 ```bash
-export GITHUB_TOKEN=<your-token>
+export GITHUB_TOKEN="<your-github-token>"
 ```
 
-or on Windows
+*On Windows (PowerShell):*
 
 ```powershell
-$env:GITHUB_TOKEN="<your-token>"
+$env:GITHUB_TOKEN="<your-github-token>"
 ```
 
 ---
 
-# Configuration
+## Configuration
 
 Repository onboarding is driven by `config/config.json`.
 
-Example:
+### Example `config/config.json`:
 
 ```json
 {
-  "organisation": "my-org",
+  "organisation": "my-rha-calvary",
   "repos": [
     {
       "repo_name": "terraform-network",
@@ -120,195 +112,120 @@ Example:
 }
 ```
 
-## Configuration Fields
+### Configuration Fields
 
 | Field | Description |
-|--------|-------------|
-| organisation | GitHub organisation name |
-| repo_name | Repository name |
-| repo_type | Template folder under `templates/` |
-| team_slug | GitHub team to grant Maintain access |
+|---|---|
+| `organisation` | GitHub organisation slug (e.g. `my-rha-calvary`) |
+| `repo_name` | Name of the GitHub repository to create |
+| `repo_type` | Template directory under `templates/` matching the repository purpose (e.g. `infra`) |
+| `team_slug` | GitHub team slug to grant Maintain permissions |
 
 ---
 
-# Template Structure
+## Generated Repository Structure
 
-Each repository type has its own template folder.
-
-Example:
-
-```
-templates/
-├── infra/
-│   ├── build.yaml
-│   └── deploy.yaml
-│
-├── application/
-│   ├── build.yaml
-│   └── release.yaml
-```
-
-All `.yaml` files are copied into:
-
-```
-.github/workflows/
-```
-
-inside the newly created repository.
-
----
-
-# Generated Repository
-
-Each repository will contain:
+Each generated repository will contain:
 
 ```
 .
-├── .github
+├── .github/
 │   ├── CODEOWNERS
-│   └── workflows
-│       ├── build.yaml
-│       └── deploy.yaml
-└── .gitignore
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   ├── actions/
+│   │   └── setup-environment/
+│   │       └── actions.yaml
+│   └── workflows/
+│       ├── pr_title_check.yaml
+│       └── <repo_type_workflows>.yaml
+├── .gitignore
+└── .pre-commit-config.yaml
 ```
 
 ---
 
-# Branch Protection
+## Branch Protection & Environments
 
-The script automatically configures protection on the `main` branch.
+### Main Branch Protection Rules
 
-Settings include:
+- Require pull request reviews (at least 1 approving review)
+- Require Code Owner reviews
+- Dismiss stale pull request approvals on new commits
+- Enforce protection rules for administrators
 
-- Require pull request reviews
-- Require one approval
-- Require CODEOWNER reviews
-- Dismiss stale approvals
-- Enforce rules for administrators
+### Deployment Environments
 
----
-
-# Deployment Environments
-
-The following GitHub environments are created automatically.
-
-## nonprod
-
-Standard deployment environment.
-
-## prod
-
-Production environment configured with:
-
-- Required reviewers
-- Prevent self-review
+- `nonprod`: Standard deployment environment.
+- `prod`: Protected production environment requiring team reviewer approval and preventing self-review.
 
 ---
 
-# Running the Script
+## Running the Onboarding Script
 
-Run:
+Execute the script from the repository root:
 
 ```bash
-python onboard.py
-```
-
-The script will:
-
-1. Read the configuration.
-2. Authenticate with GitHub.
-3. Check whether each repository already exists.
-4. Create missing repositories.
-5. Bootstrap the repository.
-6. Push the initial commit.
-7. Configure repository governance.
-
----
-
-# Workflow
-
-```
-Read config
-      │
-      ▼
-Authenticate to GitHub
-      │
-      ▼
-Repository exists?
-      │
- ┌────┴────┐
- │         │
-Yes        No
- │         │
-Skip    Create repository
-             │
-             ▼
-Assign team permissions
-             │
-             ▼
-Generate repository files
-             │
-             ▼
-Copy workflow templates
-             │
-             ▼
-Initial Git commit
-             │
-             ▼
-Push to GitHub
-             │
-             ▼
-Configure branch protection
-             │
-             ▼
-Create deployment environments
-             │
-             ▼
-Complete
+python3 onboard-github.py
 ```
 
 ---
 
-# Notes
+## Onboarding Architecture Flow
 
-- Existing repositories are skipped.
-- Repository names must be unique within the organisation.
-- The configured GitHub team must already exist.
-- Workflow templates are copied from the directory matching the configured `repo_type`.
+```
+                     Read config/config.json
+                               │
+                               ▼
+                    Authenticate with GitHub
+                               │
+                               ▼
+                    Repository exists on GitHub?
+                               │
+                      ┌────────┴────────┐
+                     Yes                No
+                      │                 │
+             Skip repo creation   Create GitHub repo
+                                        │
+                                        ▼
+                             Assign Team Maintain Access
+                                        │
+                                        ▼
+                             Generate Local Files
+                       (CODEOWNERS, .gitignore, templates)
+                                        │
+                                        ▼
+                            Copy Workflows & Actions
+                        (Repo-specific, Common, Actions)
+                                        │
+                                        ▼
+                             Git Init & Commit local
+                                        │
+                                        ▼
+                             Push Main Branch to Remote
+                                        │
+                                        ▼
+                            Apply Branch Protection
+                                        │
+                                        ▼
+                           Create Nonprod & Prod Envs
+                                        │
+                                        ▼
+                                    Complete
+```
 
 ---
-# Pre-commit Installation & Setup
 
-Once repository is cloned, best practices is to installed `pre-commit` and `pre-commit` hooks
+## Local Pre-commit Hook Setup
+
+To enforce code quality checks locally before committing:
 
 ```bash
 # 1. Install pre-commit
-pip install pre-commit  # or `brew install pre-commit`
+pip install pre-commit
 
-# 2. Enable git hook scripts
+# 2. Install git hooks
 pre-commit install
 
-# 3. (Optional) Run checks against all files manually
+# 3. Manually run checks across all files
 pre-commit run --all-files
-
----
-# Future Enhancements
-
-Potential improvements include:
-
-- Configurable branch protection policies
-- Repository topics
-- Repository description
-- Default labels
-- Secrets and variables
-- Repository rulesets
-- Dependabot configuration
-- License templates
-- README templates
-- Issue templates
-- Pull request templates
-- Template repositories
-- Better logging
-- Dry-run mode
-- Parallel repository creation
-- Unit tests
+```
