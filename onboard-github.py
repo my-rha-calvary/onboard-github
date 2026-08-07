@@ -11,6 +11,7 @@ and creates deployment environments based on a JSON configuration file.
 from pathlib import Path
 import os
 import sys
+import time
 import git  # From GitPython
 import json
 from github import Github, GithubException, Auth  # From PyGithub
@@ -355,7 +356,23 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
     # Apply Main Branch Protection Rules via GitHub SDK
     print("🔒 Applying branch protection rules to 'main'...")
-    main_branch = github_repo.get_branch("main")
+    max_retries = 5
+    retry_delay = 2
+    main_branch = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            main_branch = github_repo.get_branch("main")
+            break
+        except UnknownObjectException:
+            if attempt == max_retries:
+                print("❌ Failed to find 'main' branch after maximum retries.")
+                raise
+            print(
+                f"⏳ 'main' branch not yet registered by GitHub API. Retrying in {retry_delay}s... (Attempt {attempt}/{max_retries})"
+            )
+            time.sleep(retry_delay)
+
     main_branch.edit_protection(
         enforce_admins=True,
         required_approving_review_count=1,
