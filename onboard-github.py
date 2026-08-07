@@ -350,35 +350,46 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     # Use 'x-access-token' as the username for GitHub App installation tokens
     auth_https_url = f"https://x-access-token:{TOKEN}@github.com/{ORG}/{repo_name}.git"
     remote = local_repo.create_remote("origin", auth_https_url)
-    remote.push(refspec="main:main", set_upstream=True)
+    push_results = remote.push(refspec="main:main", set_upstream=True)
+    for info in push_results:
+        if info.flags & (info.ERROR | info.REJECTED):
+            raise RuntimeError(
+                f"❌ Git push to {full_repo} failed: {info.summary} (flags: {info.flags})"
+            )
 
     print("✅ Main branch created and pushed with Matrix CI/CD workflows.")
 
-    # Apply Main Branch Protection Rules via GitHub SDK
+    # Apply Main Branch Protection Rules via GitHub SDK with robust retry logic
     print("🔒 Applying branch protection rules to 'main'...")
-    max_retries = 5
-    retry_delay = 2
-    main_branch = None
+    max_retries = 10
+    retry_delay = 3
 
     for attempt in range(1, max_retries + 1):
         try:
-            main_branch = github_repo.get_branch("main")
+            # Re-fetch repository to ensure PyGithub has fresh REST endpoints
+            fresh_repo = g.get_repo(full_repo)
+            main_branch = fresh_repo.get_branch("main")
+            main_branch.edit_protection(
+                enforce_admins=True,
+                required_approving_review_count=1,
+                require_code_owner_reviews=True,
+                dismiss_stale_reviews=True,
+            )
+            print("✅ Branch protection rules successfully applied to 'main'.")
             break
-        except UnknownObjectException:
+        except (UnknownObjectException, GithubException) as e:
+            status = getattr(e, "status", None) or getattr(e, "data", {}).get("status")
+            if status != 404 and not isinstance(e, UnknownObjectException):
+                raise
             if attempt == max_retries:
-                print("❌ Failed to find 'main' branch after maximum retries.")
+                print(
+                    f"❌ Failed to configure branch protection after {max_retries} attempts: {e}"
+                )
                 raise
             print(
-                f"⏳ 'main' branch not yet registered by GitHub API. Retrying in {retry_delay}s... (Attempt {attempt}/{max_retries})"
+                f"⏳ 'main' branch or branch protection API not ready yet (404). Retrying in {retry_delay}s... (Attempt {attempt}/{max_retries})"
             )
             time.sleep(retry_delay)
-
-    main_branch.edit_protection(
-        enforce_admins=True,
-        required_approving_review_count=1,
-        require_code_owner_reviews=True,
-        dismiss_stale_reviews=True,
-    )
 
     # Create Environments via SDK underlying API
     print("🌐 Creating 'nonprod' environment...")
