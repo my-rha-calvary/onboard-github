@@ -162,30 +162,18 @@ def onboard_repos(auth):
 
         onboard_repo(auth, repo_name, repo_type, repo_team_slug)
 
-#TODO create functions: create folders/copy
-def onboard_repo(auth, repo_name, repo_type, team_slug):
+def create_github_repository(g, repo_name, team_slug):
     """
-    Create and initialise a GitHub repository.
-
-    This function performs the complete repository onboarding process:
-    - Creates the repository.
-    - Grants team permissions.
-    - Generates the local repository structure.
-    - Copies workflow templates.
-    - Creates the initial Git commit and pushes it.
-    - Applies branch protection rules.
-    - Creates GitHub deployment environments.
+    Create a GitHub repository under the organisation and grant team maintain permissions.
 
     Args:
-        auth (github.Auth.Token): GitHub authentication object.
-        repo_name (str): Name of the repository to create.
-        repo_type (str): Repository template type used to select workflow templates.
-        team_slug (str): GitHub team slug to grant maintain permissions.
+        g (Github): Authenticated GitHub client.
+        repo_name (str): Name of the repository.
+        team_slug (str): Slug of the team to grant permissions.
 
-    Raises:
-        SystemExit: If a GitHub API operation fails.
+    Returns:
+        tuple[Repository, int]: Created PyGithub Repository object and team ID.
     """
-    g = Github(auth=auth)
     try:
         org = g.get_organization(ORG)
     except GithubException as e:
@@ -205,7 +193,6 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
     full_repo = f"{ORG}/{repo_name}"
 
-    # Create Repository via GitHub SDK
     print(f"🚀 Creating repository: {full_repo}...")
     try:
         github_repo = org.create_repo(
@@ -224,38 +211,82 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     except GithubException as e:
         print(f"❌ Failed to grant access: {e.data.get('message')}")
 
+    return github_repo, actual_team_id
+
+
+def copy_template_files(src_dir, dst_dir, pattern="*.yaml", desc="Workflow"):
+    """
+    Copy matching template files from source directory to destination directory.
+
+    Args:
+        src_dir (Path): Source directory path.
+        dst_dir (Path): Destination directory path.
+        pattern (str): Glob pattern to match files.
+        desc (str): Description string for logging.
+    """
+    if not src_dir.exists():
+        print(f"Error: {desc} source directory '{src_dir}' does not exist.")
+        return
+
+    for src_path in src_dir.glob(pattern):
+        if src_path.is_file():
+            dst_path = dst_dir / src_path.name
+            try:
+                dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
+                print(f"Processed {desc}: {src_path.name} -> {dst_path.name}")
+            except Exception as e:
+                print(f"Error processing {desc.lower()} {src_path.name}: {e}")
+
+
+def copy_single_file(src_path, dst_path, desc):
+    """
+    Copy a single file from source path to destination path.
+
+    Args:
+        src_path (Path): Source file path.
+        dst_path (Path): Destination file path.
+        desc (str): Description string for logging.
+    """
+    if src_path.exists():
+        try:
+            dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
+            print(f"Processed {desc}: {src_path.name} -> {dst_path.name}")
+        except Exception as e:
+            print(f"Error copying {desc.lower()}: {e}")
+    else:
+        print(f"Warning: {desc} template missing at '{src_path}'")
+
+
+def generate_local_repo_files(repo_name, repo_type, team_slug):
+    """
+    Create initial file structure and copy templates for the target local repository.
+
+    Args:
+        repo_name (str): Name of the target repository.
+        repo_type (str): Repository template type (e.g. infra).
+        team_slug (str): GitHub team slug for CODEOWNERS.
+
+    Returns:
+        Path: Path to the target local repository directory.
+    """
     repo_root = Path(__file__).resolve().parent
-
-    # Define the new target directory path cleanly as a Path object
-    repo_root = Path(__file__).resolve().parent
-
-# Define the new target directory path cleanly as a Path object
-    repo_root = Path(__file__).resolve().parent
-
-    # Define the actions.yaml source and destination repo paths
-    src_dir_actions = repo_root / "templates/actions/setup-environment"
-
-    # Define the common actions folder
-    src_dir_common = repo_root / "templates/common"
-
-    # Define the template source and destination repo paths
-    src_dir = repo_root / "templates" / f"{repo_type}"
     target_repo_dir = repo_root / repo_name
 
-    # Define .precommit template paths
+    src_dir_actions = repo_root / "templates/actions/setup-environment"
+    src_dir_common = repo_root / "templates/common"
+    src_dir = repo_root / "templates" / f"{repo_type}"
     src_precommit = repo_root / "templates" / ".pre-commit-config.yaml"
     dst_precommit = target_repo_dir / ".pre-commit-config.yaml"
+    src_pr_template = repo_root / "templates" / "PULL_REQUEST_TEMPLATE.md"
 
-        # Create the folder for the new repository
+    # Create directory structure
     target_repo_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create .gitignore using absolute paths
     gitignore_path = target_repo_dir / ".gitignore"
     with open(gitignore_path, "w", encoding="utf-8") as f:
         f.write("# Default gitignore template\n")
         f.write("__pycache__/\n")
 
-    # Create .github/workflows and .github/actions/setup-environment directories
     github_dir = target_repo_dir / ".github"
     workflows_dir = github_dir / "workflows"
     workflows_dir.mkdir(parents=True, exist_ok=True)
@@ -263,77 +294,30 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     actions_dir = github_dir / "actions" / "setup-environment"
     actions_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write to CODEOWNERS using absolute paths
+    dst_pr_template = github_dir / "PULL_REQUEST_TEMPLATE.md"
+
     codeowners_path = github_dir / "CODEOWNERS"
     with open(codeowners_path, "w", encoding="utf-8") as f:
         f.write(f"* @{ORG}/{team_slug}\n")
 
-    # Copy Workflow Templates
-    if not src_dir.exists():
-        print(f"Error: Template source directory '{src_dir}' does not exist.")
-    else:
-        for src_path in src_dir.glob("*.yaml"):
-            if src_path.is_file():
-                dst_path = workflows_dir / src_path.name
-                try:
-                    dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
-                    print(f"Processed Workflow: {src_path.name} -> {dst_path.name}")
-                except Exception as e:
-                    print(f"Error processing workflow {src_path.name}: {e}")
+    copy_template_files(src_dir, workflows_dir, "*.yaml", "Workflow")
+    copy_template_files(src_dir_common, workflows_dir, "*.yaml", "Workflow")
+    copy_template_files(src_dir_actions, actions_dir, "*.yaml", "Action")
+    copy_single_file(src_pr_template, dst_pr_template, "PR Template")
+    copy_single_file(src_precommit, dst_precommit, "Root File")
 
-    # Copy Common Workflow Templates
-    if not src_dir_common.exists():
-        print(f"Error: Common Template source directory '{src_dir_common}' does not exist.")
-    else:
-        for src_path in src_dir_common.glob("*.yaml"):
-            if src_path.is_file():
-                dst_path = workflows_dir / src_path.name
-                try:
-                    dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
-                    print(f"Processed Workflow: {src_path.name} -> {dst_path.name}")
-                except Exception as e:
-                    print(f"Error processing workflow {src_path.name}: {e}")
+    return target_repo_dir
 
 
-    # Copy Action Templates (setup-environment)
-    if not src_dir_actions.exists():
-        print(f"Error: Action source directory '{src_dir_actions}' does not exist.")
-    else:
-        for src_path in src_dir_actions.glob("*.yaml"):
-            if src_path.is_file():
-                dst_path = actions_dir / src_path.name
-                try:
-                    dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
-                    print(f"Processed Action: {src_path.name} -> {dst_path.name}")
-                except Exception as e:
-                    print(f"Error processing action {src_path.name}: {e}")
+def init_and_push_git_repo(target_repo_dir, repo_name, full_repo):
+    """
+    Initialise Git repository locally, commit template files, and push to GitHub.
 
-    # Define PR template paths
-    src_pr_template = repo_root / "templates" / "PULL_REQUEST_TEMPLATE.md"
-    dst_pr_template = github_dir / "PULL_REQUEST_TEMPLATE.md"
-
-    # Copy single PR Template
-    if src_pr_template.exists():
-        try:
-            dst_pr_template.write_text(src_pr_template.read_text(encoding="utf-8"), encoding="utf-8")
-            print(f"Processed PR Template: {src_pr_template.name} -> {dst_pr_template.name}")
-        except Exception as e:
-            print(f"Error processing PR template: {e}")
-    else:
-        print(f"Warning: PR template source '{src_pr_template}' does not exist.")
-
-    # Copy .precommit to target repository root
-    if src_precommit.exists():
-        try:
-            dst_precommit.write_text(src_precommit.read_text(encoding="utf-8"), encoding="utf-8")
-            print(f"Processed Root File: {src_precommit.name} -> {dst_precommit.name}")
-        except Exception as e:
-            print(f"Error copying pre-commit template: {e}")
-    else:
-        print(f"Warning: Pre-commit template missing at '{src_precommit}'")
-
-
-    # Git Operations via GitPython SDK
+    Args:
+        target_repo_dir (Path): Path to the target local repository.
+        repo_name (str): Repository name.
+        full_repo (str): Full repository identifier (ORG/repo_name).
+    """
     print("📦 Initializing local Git repository and pushing via HTTPS...")
 
     local_repo = git.Repo.init(str(target_repo_dir))
@@ -347,7 +331,6 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     local_repo.git.branch("-M", "main")
     os.environ["GIT_TERMINAL_PROMPT"] = "0"
 
-    # Use 'x-access-token' as the username for GitHub App installation tokens
     auth_https_url = f"https://x-access-token:{TOKEN}@github.com/{ORG}/{repo_name}.git"
     remote = local_repo.create_remote("origin", auth_https_url)
     push_results = remote.push(refspec="main:main", set_upstream=True)
@@ -359,14 +342,21 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
 
     print("✅ Main branch created and pushed with Matrix CI/CD workflows.")
 
-    # Apply Main Branch Protection Rules via GitHub SDK with robust retry logic
+
+def apply_branch_protection(g, full_repo):
+    """
+    Apply branch protection rules to the main branch with retry logic.
+
+    Args:
+        g (Github): Authenticated GitHub client.
+        full_repo (str): Full repository identifier (ORG/repo_name).
+    """
     print("🔒 Applying branch protection rules to 'main'...")
     max_retries = 10
     retry_delay = 3
 
     for attempt in range(1, max_retries + 1):
         try:
-            # Re-fetch repository to ensure PyGithub has fresh REST endpoints
             fresh_repo = g.get_repo(full_repo)
             main_branch = fresh_repo.get_branch("main")
             main_branch.edit_protection(
@@ -391,7 +381,15 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
             )
             time.sleep(retry_delay)
 
-    # Create Environments via SDK underlying API
+
+def create_github_environments(github_repo, actual_team_id):
+    """
+    Create deployment environments ('nonprod' and 'prod') on GitHub.
+
+    Args:
+        github_repo (Repository): PyGithub Repository object.
+        actual_team_id (int): GitHub team ID for environment protection rules.
+    """
     print("🌐 Creating 'nonprod' environment...")
     github_repo._requester.requestJsonAndCheck(
         "PUT", f"{github_repo.url}/environments/nonprod"
@@ -406,11 +404,43 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
             "reviewers": [
                 {
                     "type": "Team",
-                    "id": actual_team_id,  # Using the dynamically fetched ID!
+                    "id": actual_team_id,
                 }
             ],
         },
     )
+
+
+def onboard_repo(auth, repo_name, repo_type, team_slug):
+    """
+    Create and initialise a GitHub repository.
+
+    This function performs the complete repository onboarding process:
+    - Creates the repository.
+    - Grants team permissions.
+    - Generates the local repository structure.
+    - Copies workflow templates.
+    - Creates the initial Git commit and pushes it.
+    - Applies branch protection rules.
+    - Creates GitHub deployment environments.
+
+    Args:
+        auth (github.Auth.Token): GitHub authentication object.
+        repo_name (str): Name of the repository to create.
+        repo_type (str): Repository template type used to select workflow templates.
+        team_slug (str): GitHub team slug to grant maintain permissions.
+
+    Raises:
+        SystemExit: If a GitHub API operation fails.
+    """
+    g = Github(auth=auth)
+    full_repo = f"{ORG}/{repo_name}"
+
+    github_repo, actual_team_id = create_github_repository(g, repo_name, team_slug)
+    target_repo_dir = generate_local_repo_files(repo_name, repo_type, team_slug)
+    init_and_push_git_repo(target_repo_dir, repo_name, full_repo)
+    apply_branch_protection(g, full_repo)
+    create_github_environments(github_repo, actual_team_id)
 
     print(
         f"🎉 Repository {repo_name} successfully automated with sequential Matrix pipelines!"
