@@ -1,0 +1,35 @@
+name: "Validate PR Title"
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+jobs:
+  validate-title:
+    name: Check Title Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR Title Format
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # Pattern matches: <type>: <ticket_id> <description>
+          # Allowed types: fix, feat, chore, docs, refactor, test, style, perf, ci, build
+          REGEX="^(fix|feat|chore|docs|refactor|test|style|perf|ci|build):\s+\S+\s+.+$"
+
+          if [[ "$PR_TITLE" =~ $REGEX ]]; then
+            echo "✅ PR Title matches required format: '$PR_TITLE'"
+          else
+            echo "::error title=Invalid PR Title Format::PR Title '$PR_TITLE' does not match required format."
+            echo "-----------------------------------------------------------------"
+            echo "❌ Expected format : <type>: <ticket_id> <quick description>"
+            echo "   Example (fix)   : fix: PROJ-123 resolve race condition in upload"
+            echo "   Example (feat)  : feat: #456 add setup-environment action"
+            echo "-----------------------------------------------------------------"
+            echo "Allowed types: fix, feat, chore, docs, refactor, test, style, perf, ci, build"
+            exit 1
+          fi

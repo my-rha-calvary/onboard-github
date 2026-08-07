@@ -14,39 +14,7 @@
         {
             "repo_name": "my-rha-test-3",
             "team_slug": "my-rha-cal-team",
-            "repo_type": "infra"
-        },
-        {
-            "repo_name": "my-rha-test-4",
-            "team_slug": "my-rha-cal-team",
-            "repo_type": "infra"
-        },
-        {
-            "repo_name": "my-rha-test-5",
-            "team_slug": "my-rha-cal-team",
-            "repo_type": "infra"
-        },
-        {
-            "repo_name": "my-rha-test-6",
-            "team_slug": "my-rha-cal-team",
-            "repo_type": "infra"
-        },
-        {
-            "repo_name": "my-rha-test-7",
-            "team_slug": "my-rha-cal-team",
-            "repo_type": "infra"
-        },
-        {
-            "repo_name": "my-rha-test-8",
-            "team_slug": "my-rha-cal-team",
-            "repo_type": "infra"
-        }        ,
-        {
-            "repo_name": "my-rha-test-9",
-            "team_slug": "my-rha-cal-team",
-            "repo_type": "infra"
+            "repo_type": "module"
         }
-
-
     ]
 }

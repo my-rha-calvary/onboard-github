@@ -11,6 +11,7 @@ and creates deployment environments based on a JSON configuration file.
 from pathlib import Path
 import os
 import sys
+import time
 import git  # From GitPython
 import json
 from github import Github, GithubException, Auth  # From PyGithub
@@ -228,11 +229,24 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     # Define the new target directory path cleanly as a Path object
     repo_root = Path(__file__).resolve().parent
 
+# Define the new target directory path cleanly as a Path object
+    repo_root = Path(__file__).resolve().parent
+
+    # Define the actions.yaml source and destination repo paths
+    src_dir_actions = repo_root / "templates/actions/setup-environment"
+
+    # Define the common actions folder
+    src_dir_common = repo_root / "templates/common"
+
     # Define the template source and destination repo paths
     src_dir = repo_root / "templates" / f"{repo_type}"
     target_repo_dir = repo_root / repo_name
 
-    # Create the folder for the new repository
+    # Define .precommit template paths
+    src_precommit = repo_root / "templates" / ".pre-commit-config.yaml"
+    dst_precommit = target_repo_dir / ".pre-commit-config.yaml"
+
+        # Create the folder for the new repository
     target_repo_dir.mkdir(parents=True, exist_ok=True)
 
     # Create .gitignore using absolute paths
@@ -241,17 +255,20 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
         f.write("# Default gitignore template\n")
         f.write("__pycache__/\n")
 
-    # Create .github/workflows directory structure
+    # Create .github/workflows and .github/actions/setup-environment directories
     github_dir = target_repo_dir / ".github"
     workflows_dir = github_dir / "workflows"
     workflows_dir.mkdir(parents=True, exist_ok=True)
+
+    actions_dir = github_dir / "actions" / "setup-environment"
+    actions_dir.mkdir(parents=True, exist_ok=True)
 
     # Write to CODEOWNERS using absolute paths
     codeowners_path = github_dir / "CODEOWNERS"
     with open(codeowners_path, "w", encoding="utf-8") as f:
         f.write(f"* @{ORG}/{team_slug}\n")
 
-    # Copy the Templates
+    # Copy Workflow Templates
     if not src_dir.exists():
         print(f"Error: Template source directory '{src_dir}' does not exist.")
     else:
@@ -259,15 +276,62 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
             if src_path.is_file():
                 dst_path = workflows_dir / src_path.name
                 try:
-                    with open(src_path, "r", encoding="utf-8") as f_src:
-                        file_content = f_src.read()
-
-                    with open(dst_path, "w", encoding="utf-8") as f_dst:
-                        f_dst.write(file_content)
-
-                    print(f"Processed: {src_path.name} -> {dst_path.name}")
+                    dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
+                    print(f"Processed Workflow: {src_path.name} -> {dst_path.name}")
                 except Exception as e:
-                    print(f"Error: exception raise {e}")
+                    print(f"Error processing workflow {src_path.name}: {e}")
+
+    # Copy Common Workflow Templates
+    if not src_dir_common.exists():
+        print(f"Error: Common Template source directory '{src_dir_common}' does not exist.")
+    else:
+        for src_path in src_dir_common.glob("*.yaml"):
+            if src_path.is_file():
+                dst_path = workflows_dir / src_path.name
+                try:
+                    dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
+                    print(f"Processed Workflow: {src_path.name} -> {dst_path.name}")
+                except Exception as e:
+                    print(f"Error processing workflow {src_path.name}: {e}")
+
+
+    # Copy Action Templates (setup-environment)
+    if not src_dir_actions.exists():
+        print(f"Error: Action source directory '{src_dir_actions}' does not exist.")
+    else:
+        for src_path in src_dir_actions.glob("*.yaml"):
+            if src_path.is_file():
+                dst_path = actions_dir / src_path.name
+                try:
+                    dst_path.write_text(src_path.read_text(encoding="utf-8"), encoding="utf-8")
+                    print(f"Processed Action: {src_path.name} -> {dst_path.name}")
+                except Exception as e:
+                    print(f"Error processing action {src_path.name}: {e}")
+
+    # Define PR template paths
+    src_pr_template = repo_root / "templates" / "PULL_REQUEST_TEMPLATE.md"
+    dst_pr_template = github_dir / "PULL_REQUEST_TEMPLATE.md"
+
+    # Copy single PR Template
+    if src_pr_template.exists():
+        try:
+            dst_pr_template.write_text(src_pr_template.read_text(encoding="utf-8"), encoding="utf-8")
+            print(f"Processed PR Template: {src_pr_template.name} -> {dst_pr_template.name}")
+        except Exception as e:
+            print(f"Error processing PR template: {e}")
+    else:
+        print(f"Warning: PR template source '{src_pr_template}' does not exist.")
+
+    # Copy .precommit to target repository root
+    if src_precommit.exists():
+        try:
+            dst_precommit.write_text(src_precommit.read_text(encoding="utf-8"), encoding="utf-8")
+            print(f"Processed Root File: {src_precommit.name} -> {dst_precommit.name}")
+        except Exception as e:
+            print(f"Error copying pre-commit template: {e}")
+    else:
+        print(f"Warning: Pre-commit template missing at '{src_precommit}'")
+
 
     # Git Operations via GitPython SDK
     print("📦 Initializing local Git repository and pushing via HTTPS...")
@@ -286,19 +350,46 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     # Use 'x-access-token' as the username for GitHub App installation tokens
     auth_https_url = f"https://x-access-token:{TOKEN}@github.com/{ORG}/{repo_name}.git"
     remote = local_repo.create_remote("origin", auth_https_url)
-    remote.push(refspec="main:main", set_upstream=True)
+    push_results = remote.push(refspec="main:main", set_upstream=True)
+    for info in push_results:
+        if info.flags & (info.ERROR | info.REJECTED):
+            raise RuntimeError(
+                f"❌ Git push to {full_repo} failed: {info.summary} (flags: {info.flags})"
+            )
 
     print("✅ Main branch created and pushed with Matrix CI/CD workflows.")
 
-    # Apply Main Branch Protection Rules via GitHub SDK
+    # Apply Main Branch Protection Rules via GitHub SDK with robust retry logic
     print("🔒 Applying branch protection rules to 'main'...")
-    main_branch = github_repo.get_branch("main")
-    main_branch.edit_protection(
-        enforce_admins=True,
-        required_approving_review_count=1,
-        require_code_owner_reviews=True,
-        dismiss_stale_reviews=True,
-    )
+    max_retries = 10
+    retry_delay = 3
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Re-fetch repository to ensure PyGithub has fresh REST endpoints
+            fresh_repo = g.get_repo(full_repo)
+            main_branch = fresh_repo.get_branch("main")
+            main_branch.edit_protection(
+                enforce_admins=True,
+                required_approving_review_count=1,
+                require_code_owner_reviews=True,
+                dismiss_stale_reviews=True,
+            )
+            print("✅ Branch protection rules successfully applied to 'main'.")
+            break
+        except (UnknownObjectException, GithubException) as e:
+            status = getattr(e, "status", None) or getattr(e, "data", {}).get("status")
+            if status != 404 and not isinstance(e, UnknownObjectException):
+                raise
+            if attempt == max_retries:
+                print(
+                    f"❌ Failed to configure branch protection after {max_retries} attempts: {e}"
+                )
+                raise
+            print(
+                f"⏳ 'main' branch or branch protection API not ready yet (404). Retrying in {retry_delay}s... (Attempt {attempt}/{max_retries})"
+            )
+            time.sleep(retry_delay)
 
     # Create Environments via SDK underlying API
     print("🌐 Creating 'nonprod' environment...")
