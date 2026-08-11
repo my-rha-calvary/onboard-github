@@ -2,7 +2,7 @@ name: Automation - Create New Repository
 
 on:
   workflow_dispatch:
-  pull_request:
+  push:
     branches: [ main ]
 
 jobs:
