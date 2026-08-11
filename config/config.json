@@ -14,7 +14,12 @@
         {
             "repo_name": "my-rha-test-3",
             "team_slug": "my-rha-cal-team",
-            "repo_type": "module"
+            "repo_type": "infra"
+        },
+        {
+            "repo_name": "aws-cda-infra-infra",
+            "team_slug": "my-rha-cal-team",
+            "repo_type": "infra"
         }
     ]
 }
