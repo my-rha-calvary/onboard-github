@@ -162,6 +162,24 @@ def onboard_repos(auth):
 
         onboard_repo(auth, repo_name, repo_type, repo_team_slug)
 
+def add_team_as_maintainer(team, github_repo, team_slug, repo_name):
+    """
+    Grant maintain access for a team on a GitHub repository.
+
+    Args:
+        team (Team): PyGithub Team object.
+        github_repo (Repository): PyGithub Repository object.
+        team_slug (str): Slug of the team.
+        repo_name (str): Name of the repository.
+    """
+    print(f"🔑 Granting '{team_slug}' maintain access to {repo_name}...")
+    try:
+        team.update_team_repository(github_repo, "maintain")
+        print("✅ Access granted successfully.")
+    except GithubException as e:
+        print(f"❌ Failed to grant access: {e.data.get('message')}")
+
+
 def create_github_repository(g, repo_name, team_slug):
     """
     Create a GitHub repository under the organisation and grant team maintain permissions.
@@ -204,12 +222,7 @@ def create_github_repository(g, repo_name, team_slug):
         print(f"Failed to create repository: {e.data.get('message')}")
         sys.exit(1)
 
-    print(f"🔑 Granting '{team_slug}' maintain access to {repo_name}...")
-    try:
-        team.update_team_repository(github_repo, "maintain")
-        print("✅ Access granted successfully.")
-    except GithubException as e:
-        print(f"❌ Failed to grant access: {e.data.get('message')}")
+    add_team_as_maintainer(team, github_repo, team_slug, repo_name)
 
     return github_repo, actual_team_id
 

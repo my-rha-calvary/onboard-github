@@ -107,6 +107,11 @@ Repository onboarding is driven by `config/config.json`.
       "repo_name": "application-api",
       "repo_type": "application",
       "team_slug": "backend-team"
+    },
+    {
+      "repo_name": "common-utility-repo",
+      "repo_type": "",
+      "team_slug": "dev-team"
     }
   ]
 }
@@ -118,7 +123,7 @@ Repository onboarding is driven by `config/config.json`.
 |---|---|
 | `organisation` | GitHub organisation slug (e.g. `my-rha-calvary`) |
 | `repo_name` | Name of the GitHub repository to create |
-| `repo_type` | Template directory under `templates/` matching the repository purpose (e.g. `infra`) |
+| `repo_type` | Template directory under `templates/` matching the repository purpose (e.g. `infra`). Can be an empty string (`""`) to skip type-specific templates and only copy `common` workflows and `actions` |
 | `team_slug` | GitHub team slug to grant Maintain permissions |
 
 ---
@@ -137,7 +142,7 @@ Each generated repository will contain:
 │   │       └── actions.yaml
 │   └── workflows/
 │       ├── pr_title_check.yaml
-│       └── <repo_type_workflows>.yaml
+│       └── <repo_type_workflows>.yaml  (if repo_type is non-empty)
 ├── .gitignore
 └── .pre-commit-config.yaml
 ```
