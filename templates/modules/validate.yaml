@@ -1,0 +1,62 @@
+name: OpenTofu Module Validation
+
+on:
+  pull_request:
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+      - '.github/workflows/validate.yaml'
+  push:
+    branches:
+      - main
+
+jobs:
+  tofu-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.6.0
+
+      - name: Init Opentofu
+        run: tofu init
+        if: always()
+
+      - name: OpenTofu Format Check
+        run: tofu fmt -check -recursive .
+        if: always()
+
+      - name: OpenTofu Validate
+        run: tofu validate
+        if: always()
+
+  tflint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Init TFLint
+        run: tflint --init --minimum-failure-severity warning
+
+      - name: Run TFLint
+        run: tflint -f compact
+
+  tfsec:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: '.'
+          version: latest
