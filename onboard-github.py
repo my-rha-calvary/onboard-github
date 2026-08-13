@@ -263,7 +263,7 @@ def generate_local_repo_files(repo_name, repo_type, team_slug):
 
     Args:
         repo_name (str): Name of the target repository.
-        repo_type (str): Repository template type (e.g. infra).
+        repo_type (str): Repository template type (e.g. infra, or empty string).
         team_slug (str): GitHub team slug for CODEOWNERS.
 
     Returns:
@@ -274,7 +274,6 @@ def generate_local_repo_files(repo_name, repo_type, team_slug):
 
     src_dir_actions = repo_root / "templates/actions/setup-environment"
     src_dir_common = repo_root / "templates/common"
-    src_dir = repo_root / "templates" / f"{repo_type}"
     src_precommit = repo_root / "templates" / ".pre-commit-config.yaml"
     dst_precommit = target_repo_dir / ".pre-commit-config.yaml"
     src_pr_template = repo_root / "templates" / "PULL_REQUEST_TEMPLATE.md"
@@ -300,7 +299,10 @@ def generate_local_repo_files(repo_name, repo_type, team_slug):
     with open(codeowners_path, "w", encoding="utf-8") as f:
         f.write(f"* @{ORG}/{team_slug}\n")
 
-    copy_template_files(src_dir, workflows_dir, "*.yaml", "Workflow")
+    if repo_type:
+        src_dir = repo_root / "templates" / repo_type
+        copy_template_files(src_dir, workflows_dir, "*.yaml", "Workflow")
+
     copy_template_files(src_dir_common, workflows_dir, "*.yaml", "Workflow")
     copy_template_files(src_dir_actions, actions_dir, "*.yaml", "Action")
     copy_single_file(src_pr_template, dst_pr_template, "PR Template")
