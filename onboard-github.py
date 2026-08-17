@@ -215,7 +215,7 @@ def create_github_repository(g, repo_name, team_slug):
     try:
         github_repo = org.create_repo(
             name=repo_name,
-            private=False,  # TODO set to True in CalvaryCare org.
+            private=True,
             auto_init=False,
         )
     except GithubException as e:
