@@ -150,6 +150,8 @@ def onboard_repos(auth):
         repo_name = repo.get("repo_name", None)
         repo_team_slug = repo.get("team_slug", None)
         repo_type = repo.get("repo_type", "infra")
+        repo_description = repo.get("repo_description", None)
+        repo_visibility = repo.get("repo_visibility", "private")
         if repo_name is None or repo_team_slug is None:
             raise Exception(
                 f"Review the configuration: {repo_name} or {repo_team_slug} cannot be None"
@@ -160,7 +162,7 @@ def onboard_repos(auth):
             print(f"{ORG}/{repo_name} already exists - skipping ...")
             continue
 
-        onboard_repo(auth, repo_name, repo_type, repo_team_slug)
+        onboard_repo(auth, repo_name, repo_type, repo_team_slug, repo_description, repo_visibility)
 
 def add_team_as_maintainer(team, github_repo, team_slug, repo_name):
     """
@@ -180,7 +182,7 @@ def add_team_as_maintainer(team, github_repo, team_slug, repo_name):
         print(f"❌ Failed to grant access: {e.data.get('message')}")
 
 
-def create_github_repository(g, repo_name, team_slug):
+def create_github_repository(g, repo_name, team_slug, repo_description, repo_visibility):
     """
     Create a GitHub repository under the organisation and grant team maintain permissions.
 
@@ -188,6 +190,8 @@ def create_github_repository(g, repo_name, team_slug):
         g (Github): Authenticated GitHub client.
         repo_name (str): Name of the repository.
         team_slug (str): Slug of the team to grant permissions.
+        repo_description (str): Description of the repository.
+        repo_visibility (str): Visibility of the repository (private or internal).
 
     Returns:
         tuple[Repository, int]: Created PyGithub Repository object and team ID.
@@ -215,7 +219,9 @@ def create_github_repository(g, repo_name, team_slug):
     try:
         github_repo = org.create_repo(
             name=repo_name,
-            private=True,
+            description=repo_description,
+            private=True if repo_visibility == "private" else False,
+            visibility="internal" if repo_visibility == "internal" else None,
             auto_init=False,
         )
     except GithubException as e:
@@ -426,7 +432,7 @@ def create_github_environments(github_repo, actual_team_id):
     )
 
 
-def onboard_repo(auth, repo_name, repo_type, team_slug):
+def onboard_repo(auth, repo_name, repo_type, team_slug, repo_description, repo_visibility="private"):
     """
     Create and initialise a GitHub repository.
 
@@ -451,7 +457,7 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     g = Github(auth=auth)
     full_repo = f"{ORG}/{repo_name}"
 
-    github_repo, actual_team_id = create_github_repository(g, repo_name, team_slug)
+    github_repo, actual_team_id = create_github_repository(g, repo_name, team_slug, repo_description, repo_visibility)
     target_repo_dir = generate_local_repo_files(repo_name, repo_type, team_slug)
     init_and_push_git_repo(target_repo_dir, repo_name, full_repo)
     apply_branch_protection(g, full_repo)

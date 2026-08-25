@@ -1,0 +1,617 @@
+[
+  {
+    "repo_name": "aws-digitalassistant-app-chat-fe",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-digitalassistant-app-portal-be",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-lambda",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-opensearch",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-eapi-general-homecare",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "salesforce_calvary",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-digitalassistant-app-notes-fe",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "cloud-data-hub-dbt-main",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "cloud-repo-onboarding",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-ecs-task-definition",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-digitalassistant-app-portal-fe",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-vna-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-tag",
+    "team_slug": "calvarycare/calvary-ict-cloud-team",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-digitalassistant-app",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-digitalassistant-app-chat-be",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-digitalassistant-app-notes-be",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-ecscluster-fargate",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "cloud-data-hub-airflow-dags",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "datahub-powerbi-dashboards",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-ecr",
+    "team_slug": "calvarycare/calvary-ict-cloud-team",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-scp",
+    "team_slug": "calvarycare/calvary-ict-cloud-team",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-eapi-chris21",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-digitalassistant-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-platform-identity",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "Data_Science",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-efs",
+    "team_slug": "calvarycare/calvary-ict-cloud-team",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-alb",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-ecs-service",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "cloud-data-hub-snowflake-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-chefmax-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-acm",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-uipath-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "cloud-data-hub-airflow",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-claim-proc",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-invoice-proc",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-doc-proc",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-event-sf",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-dassist-proc",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-sapi-dassist-2-homecare",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-fin-sync",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "provar_calvary",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "data-hub-onprem",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-platform-scp",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-landing-zone",
+    "team_slug": "josh-lopez",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-platform-scheduler",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-saccedi",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-skill-mngt",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-ssm",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-webpas-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-bedrock-guardrail",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-payfile-expt",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-eapi-dassist-homecare",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-eapi-test",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-emp-sync",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-qlik-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-dynamodb",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-ezescan-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-mirth-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "digital-assistant-uniting",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-autobilling-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-platform-database",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-report-proc",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "sf-datamig",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-sqlbench-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-sapi-techone",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-platform-monitor",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-risk-mngt",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-dh-sync",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-olinqua-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "feature-SD-4003",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "cloud-data-hub-awsprivatelink",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-demo",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-patchmanager",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-rds",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "EDI-Automation-Scripts",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "mulesoft-template-api",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-papi-sa-proc",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-app-jce-pbe-encryptor",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-powerbi-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "cloud-datahub",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-powerhealth-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-ssrs-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-chris21-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-app-error-notif",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-platform-monitoring",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-ngfw-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-platform-security",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-m365-toolkit",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-icare-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "donation_management",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tgw-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-tgw",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-vpc",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-certauth-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-epicor-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-fsx",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-ec2",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-migration-test-app",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-s3",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-sg",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-kms",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-tofu-module-iam",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-riskman-infra",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-pdf-merge-dependency",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "tofu_aws_cloudwatch_module",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "tofu_aws_ssm_module",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "tofu_aws_rds_module",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-app-redcap",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "phoebe_ses_error_processing",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvarycare-tofu-module-ses_error_processing",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "tofu-aws-modules",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "mulesoft_ses_error_processing",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "cloud_url_whitelisting_helper",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-servers-patching",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvarycare-tofu-module-ses_config_set",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvarycare-tofu-baseline",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvarycare-tofu-module-lambda",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-tofu-module-sqs",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-network-edge",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "aws-app-mulesoft",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "calvary-sapi-datahub",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "adf-sfmigration",
+    "team_slug": "",
+    "repo_type": ""
+  },
+  {
+    "repo_name": "mule-cicd-app-example",
+    "team_slug": "",
+    "repo_type": ""
+  }
+]
