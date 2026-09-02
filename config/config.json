@@ -41,7 +41,8 @@
             "team_slug": "my-rha-cal-team",
             "repo_type": "modules",
             "description": "test repo",
-            "private": true
+            "private": false,
+            "delete_branch_on_merge": true
         }
     ]
 }
