@@ -16,13 +16,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
+      # - name: Generate GitHub App Token
+      #   id: app-token
+      #   uses: actions/create-github-app-token@v1
+      #   with:
+      #     app-id: ${{ secrets.APP_ID }}
+      #     private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      #     owner: ${{ github.repository_owner }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
@@ -32,5 +32,5 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true # Automatically generates release notes based on commit history
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        # env:
+        #   GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
