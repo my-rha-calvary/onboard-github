@@ -27,7 +27,7 @@ The goal is to standardise new repositories and ensure they follow organisationa
 - **Team Access Management**: Automatically assign Maintain access to specified team slugs.
 - **Template-Based Scaffolding**: Modular copying of CI/CD workflows, composite actions, PR templates, and pre-commit configurations based on `repo_type`.
 - **Governance Controls**: Automatic `CODEOWNERS` file creation targeting assigned teams.
-- **Branch Protection**: Automatic setup of pull request review requirements, approval counts, code owner review requirements, and administrator enforcement.
+- **Branch Protection & Settings**: Automatic setup of PR review requirements, approval counts, code owner reviews, admin enforcement, and automatic deletion of head branches on PR merge.
 - **Deployment Environments**: Automated setup of `nonprod` and `prod` environments with reviewer protections.
 
 ---
@@ -101,12 +101,14 @@ Repository onboarding is driven by `config/config.json`.
     {
       "repo_name": "terraform-network",
       "repo_type": "infra",
-      "team_slug": "platform-team"
+      "team_slug": "platform-team",
+      "delete_branch_on_merge": true
     },
     {
       "repo_name": "application-api",
       "repo_type": "application",
-      "team_slug": "backend-team"
+      "team_slug": "backend-team",
+      "delete_branch_on_merge": true
     },
     {
       "repo_name": "common-utility-repo",
@@ -125,6 +127,7 @@ Repository onboarding is driven by `config/config.json`.
 | `repo_name` | Name of the GitHub repository to create |
 | `repo_type` | Template directory under `templates/` matching the repository purpose (e.g. `infra`). Can be an empty string (`""`) to skip type-specific templates and only copy `common` workflows and `actions` |
 | `team_slug` | GitHub team slug to grant Maintain permissions |
+| `delete_branch_on_merge` | Optional boolean. Automatically delete head branches when PRs are merged. Defaults to `true` |
 
 ---
 
@@ -149,7 +152,7 @@ Each generated repository will contain:
 
 ---
 
-## Branch Protection & Environments
+## Branch Protection & Repository Settings
 
 ### Main Branch Protection Rules
 
@@ -157,6 +160,10 @@ Each generated repository will contain:
 - Require Code Owner reviews
 - Dismiss stale pull request approvals on new commits
 - Enforce protection rules for administrators
+
+### Repository Merge Settings
+
+- Automatically delete head branches when pull requests are merged (`delete_branch_on_merge`: `true`)
 
 ### Deployment Environments
 

@@ -150,6 +150,9 @@ def onboard_repos(auth):
         repo_name = repo.get("repo_name", None)
         repo_team_slug = repo.get("team_slug", None)
         repo_type = repo.get("repo_type", "infra")
+        description = repo.get("description", "")
+        private = repo.get("private", True)
+        delete_branch_on_merge = repo.get("delete_branch_on_merge", True)
         if repo_name is None or repo_team_slug is None:
             raise Exception(
                 f"Review the configuration: {repo_name} or {repo_team_slug} cannot be None"
@@ -160,7 +163,15 @@ def onboard_repos(auth):
             print(f"{ORG}/{repo_name} already exists - skipping ...")
             continue
 
-        onboard_repo(auth, repo_name, repo_type, repo_team_slug)
+        onboard_repo(
+            auth,
+            repo_name,
+            repo_type,
+            repo_team_slug,
+            description=description,
+            private=private,
+            delete_branch_on_merge=delete_branch_on_merge,
+        )
 
 def add_team_as_maintainer(team, github_repo, team_slug, repo_name):
     """
@@ -180,7 +191,9 @@ def add_team_as_maintainer(team, github_repo, team_slug, repo_name):
         print(f"❌ Failed to grant access: {e.data.get('message')}")
 
 
-def create_github_repository(g, repo_name, team_slug):
+def create_github_repository(
+    g, repo_name, team_slug, description="", private=True, delete_branch_on_merge=True
+):
     """
     Create a GitHub repository under the organisation and grant team maintain permissions.
 
@@ -188,6 +201,9 @@ def create_github_repository(g, repo_name, team_slug):
         g (Github): Authenticated GitHub client.
         repo_name (str): Name of the repository.
         team_slug (str): Slug of the team to grant permissions.
+        description (str, optional): Description of the repository. Defaults to "".
+        private (bool, optional): Whether the repository is private. Defaults to True.
+        delete_branch_on_merge (bool, optional): Automatically delete head branches on PR merge. Defaults to True.
 
     Returns:
         tuple[Repository, int]: Created PyGithub Repository object and team ID.
@@ -213,11 +229,23 @@ def create_github_repository(g, repo_name, team_slug):
 
     print(f"🚀 Creating repository: {full_repo}...")
     try:
-        github_repo = org.create_repo(
-            name=repo_name,
-            private=True,
-            auto_init=False,
-        )
+        repo_kwargs = {
+            "name": repo_name,
+            "auto_init": False,
+            "delete_branch_on_merge": delete_branch_on_merge,
+        }
+        if description:
+            repo_kwargs["description"] = description
+
+        if private:
+            repo_kwargs["private"] = True
+        else:
+            repo_kwargs["private"] = False
+            # repo_kwargs["visibility"] = "internal"
+
+        github_repo = org.create_repo(**repo_kwargs)
+        if delete_branch_on_merge:
+            print("🗑️ Configured automatic branch deletion on PR merge.")
     except GithubException as e:
         print(f"Failed to create repository: {e.data.get('message')}")
         sys.exit(1)
@@ -426,7 +454,15 @@ def create_github_environments(github_repo, actual_team_id):
     )
 
 
-def onboard_repo(auth, repo_name, repo_type, team_slug):
+def onboard_repo(
+    auth,
+    repo_name,
+    repo_type,
+    team_slug,
+    description="",
+    private=True,
+    delete_branch_on_merge=True,
+):
     """
     Create and initialise a GitHub repository.
 
@@ -444,6 +480,9 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
         repo_name (str): Name of the repository to create.
         repo_type (str): Repository template type used to select workflow templates.
         team_slug (str): GitHub team slug to grant maintain permissions.
+        description (str, optional): Description of the repository. Defaults to "".
+        private (bool, optional): Whether the repository is private. Defaults to True.
+        delete_branch_on_merge (bool, optional): Automatically delete head branches on PR merge. Defaults to True.
 
     Raises:
         SystemExit: If a GitHub API operation fails.
@@ -451,7 +490,14 @@ def onboard_repo(auth, repo_name, repo_type, team_slug):
     g = Github(auth=auth)
     full_repo = f"{ORG}/{repo_name}"
 
-    github_repo, actual_team_id = create_github_repository(g, repo_name, team_slug)
+    github_repo, actual_team_id = create_github_repository(
+        g,
+        repo_name,
+        team_slug,
+        description=description,
+        private=private,
+        delete_branch_on_merge=delete_branch_on_merge,
+    )
     target_repo_dir = generate_local_repo_files(repo_name, repo_type, team_slug)
     init_and_push_git_repo(target_repo_dir, repo_name, full_repo)
     apply_branch_protection(g, full_repo)
