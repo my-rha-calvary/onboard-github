@@ -34,7 +34,7 @@ jobs:
           org = os.environ["ORG"]
 
           # Run gh CLI to list matching repos
-          cmd_repos = f"gh repo list {org} --limit 100 --json name --jq \".[[] | select(.name | startswith(\\\"aws-tofu\\\")) | .name\""
+          cmd_repos = f"gh repo list {org} --limit 200 --json name --jq \".[[] | select(.name | startswith(\\\"my-rha\\\")) | .name\""
           repos = subprocess.check_output(cmd_repos, shell=True, text=True).strip().splitlines()
 
           table = "| Repository | Latest Release |\n| :--- | :--- |\n"
