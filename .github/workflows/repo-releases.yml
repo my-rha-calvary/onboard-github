@@ -28,31 +28,33 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           ORG: ${{ github.repository_owner }}
         run: |
-          # Generate Markdown Table Header
-          TABLE="| Repository | Latest Release |\n| :--- | :--- |\n"
-
-          # Fetch repos starting with aws-tofu
-          REPOS=$(gh repo list "$ORG" --limit 100 --json name --jq '.[] | select(.name | startswith("aws-tofu")) | .name')
-
-          for repo in $REPOS; do
-            TAG=$(gh release view --repo "$ORG/$repo" --json tagName --jq '.tagName' 2>/dev/null || echo "No Release")
-            TABLE="${TABLE}| [$repo](https://github.com/$ORG/$repo) | \`$TAG\` |\n"
-          done
-
-          # Export TABLE as an environment variable for Python
-          export TABLE
-
           python3 -c '
-          import os, re
+          import os, json, subprocess, re
 
-          table_content = os.environ.get("TABLE", "")
+          org = os.environ["ORG"]
+
+          # Run gh CLI to list matching repos
+          cmd_repos = f"gh repo list {org} --limit 100 --json name --jq \".[[] | select(.name | startswith(\\\"aws-tofu\\\")) | .name\""
+          repos = subprocess.check_output(cmd_repos, shell=True, text=True).strip().splitlines()
+
+          table = "| Repository | Latest Release |\n| :--- | :--- |\n"
+
+          for repo in repos:
+              if not repo:
+                  continue
+              try:
+                  cmd_tag = f"gh release view --repo {org}/{repo} --json tagName --jq .tagName"
+                  tag = subprocess.check_output(cmd_tag, shell=True, text=True).strip()
+              except Exception:
+                  tag = "No Release"
+              table += f"| [{repo}](https://github.com/{org}/{repo}) | `{tag}` |\n"
 
           with open("README.md", "r") as f:
               content = f.read()
 
           new_content = re.sub(
               r"<!-- START_RELEASE_TABLE -->.*?<!-- END_RELEASE_TABLE -->",
-              f"<!-- START_RELEASE_TABLE -->\n{table_content}<!-- END_RELEASE_TABLE -->",
+              f"<!-- START_RELEASE_TABLE -->\n{table}<!-- END_RELEASE_TABLE -->",
               content,
               flags=re.DOTALL
           )
