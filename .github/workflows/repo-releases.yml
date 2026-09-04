@@ -23,13 +23,13 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - name: Fetch Latest Releases and Provider Versions
+      - name: Fetch Latest Releases and Update README
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           ORG: ${{ github.repository_owner }}
         run: |
           python3 -c '
-          import os, re, json, base64, subprocess
+          import os, re, json, subprocess
 
           org = os.environ["ORG"]
 
@@ -44,7 +44,7 @@ jobs:
               print(f"Error listing repos: {e}")
               repos = []
 
-          table = "| Repository | Latest Release | Provider Requirements | Release Notes |\n| :--- | :--- | :--- | :--- |\n"
+          table = "| Repository | Latest Release | Release Notes |\n| :--- | :--- | :--- |\n"
 
           for repo in repos:
               # 2. Get latest release tag and body
@@ -61,32 +61,9 @@ jobs:
                   tag = "No Release"
                   body = "N/A"
 
-              # 3. Read versions.tf content from the repo
-              providers_str = "N/A"
-              try:
-                  cmd_vtf = ["gh", "api", f"repos/{org}/{repo}/contents/versions.tf", "--jq", ".content"]
-                  b64_content = subprocess.check_output(cmd_vtf, text=True).strip()
-                  vtf_content = base64.b64decode(b64_content).decode("utf-8")
+              table += f"| [{repo}](https://github.com/{org}/{repo}) | `{tag}` | {body} |\n"
 
-                  # Extract required_providers block
-                  req_match = re.search(r"required_providers\s*\{(.*?)\}", vtf_content, re.DOTALL)
-                  if req_match:
-                      block = req_match.group(1)
-                      matches = re.findall(r"(\w+)\s*=\s*(?:\{[^}]*version\s*=\s*\"([^\"]+)\"|\"([^\"]+)\")", block)
-                      prov_list = []
-                      for m in matches:
-                          p_name = m[0]
-                          p_ver = m[1] or m[2]
-                          if p_name not in ["source"]:
-                              prov_list.append(f"`{p_name}`: `{p_ver}`")
-                      if prov_list:
-                          providers_str = "<br>".join(prov_list)
-              except Exception:
-                  providers_str = "*No versions.tf*"
-
-              table += f"| [{repo}](https://github.com/{org}/{repo}) | `{tag}` | {providers_str} | {body} |\n"
-
-          # 4. Update README.md
+          # 3. Update README.md
           with open("README.md", "r") as f:
               content = f.read()
 
@@ -100,6 +77,7 @@ jobs:
           with open("README.md", "w") as f:
               f.write(new_content)
           '
+
       - name: Commit and Push Changes
         run: |
           git config user.name "github-actions[bot]"
