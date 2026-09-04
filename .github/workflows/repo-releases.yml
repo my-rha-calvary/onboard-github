@@ -23,32 +23,66 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - name: Fetch Latest Releases and Update README
+      - name: Fetch Latest Releases and Provider Versions
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ORG: ${{ github.repository_owner }}
         run: |
           python3 -c '
-          import os, json, subprocess, re
+          import os, re, subprocess
 
           org = os.environ["ORG"]
 
-          # Run gh CLI to list matching repos
-          cmd_repos = f"gh repo list {org} --limit 200 --json name --jq \".[[] | select(.name | startswith(\\\"my-rha\\\")) | .name\""
-          repos = subprocess.check_output(cmd_repos, shell=True, text=True).strip().splitlines()
+          # 1. Fetch matching repos (starts with my-rha- or aws-tofu)
+          cmd_repos = f"gh repo list {org} --limit 200 --json name --jq \".[[] | select((.name | startswith(\\\"my-rha-\\\")) or (.name | startswith(\\\"aws-tofu\\\"))) | .name\""
+          repos = [r for r in subprocess.check_output(cmd_repos, shell=True, text=True).strip().splitlines() if r]
 
-          table = "| Repository | Latest Release |\n| :--- | :--- |\n"
+          table = "| Repository | Latest Release | Provider Requirements | Release Notes |\n| :--- | :--- | :--- | :--- |\n"
 
           for repo in repos:
-              if not repo:
-                  continue
+              # 2. Get latest release tag and body
               try:
-                  cmd_tag = f"gh release view --repo {org}/{repo} --json tagName --jq .tagName"
-                  tag = subprocess.check_output(cmd_tag, shell=True, text=True).strip()
+                  cmd_rel = f"gh release view --repo {org}/{repo} --json tagName,body"
+                  rel_out = subprocess.check_output(cmd_rel, shell=True, text=True)
+                  import json
+                  rel_data = json.loads(rel_out)
+                  tag = rel_data.get("tagName", "No Release")
+                  raw_body = rel_data.get("body", "") or "N/A"
+                  body = raw_body.replace("\r\n", " ").replace("\n", " ").replace("|", "\\|")
+                  if len(body) > 100:
+                      body = body[:100] + "..."
               except Exception:
                   tag = "No Release"
-              table += f"| [{repo}](https://github.com/{org}/{repo}) | `{tag}` |\n"
+                  body = "N/A"
 
+              # 3. Read versions.tf content from the repo
+              providers_str = "N/A"
+              try:
+                  cmd_vtf = f"gh api repos/{org}/{repo}/contents/versions.tf --jq .content"
+                  b64_content = subprocess.check_output(cmd_vtf, shell=True, text=True).strip()
+                  import base64
+                  vtf_content = base64.b64decode(b64_content).decode("utf-8")
+
+                  # Extract required_providers block
+                  req_match = re.search(r"required_providers\s*\{(.*?)\}", vtf_content, re.DOTALL)
+                  if req_match:
+                      block = req_match.group(1)
+                      # Parse provider = { source = "...", version = "..." } or simple key-value pairs
+                      matches = re.findall(r"(\w+)\s*=\s*(?:\{[^}]*version\s*=\s*\"([^\"]+)\"|\"([^\"]+)\")", block)
+                      prov_list = []
+                      for m in matches:
+                          p_name = m[0]
+                          p_ver = m[1] or m[2]
+                          if p_name not in ["source"]:
+                              prov_list.append(f"`{p_name}`: `{p_ver}`")
+                      if prov_list:
+                          providers_str = "<br>".join(prov_list)
+              except Exception:
+                  providers_str = "*No versions.tf*"
+
+              table += f"| [{repo}](https://github.com/{org}/{repo}) | `{tag}` | {providers_str} | {body} |\n"
+
+          # 4. Update README.md
           with open("README.md", "r") as f:
               content = f.read()
 
@@ -62,7 +96,6 @@ jobs:
           with open("README.md", "w") as f:
               f.write(new_content)
           '
-
       - name: Commit and Push Changes
         run: |
           git config user.name "github-actions[bot]"
