@@ -241,3 +241,5 @@ pre-commit install
 # 3. Manually run checks across all files
 pre-commit run --all-files
 ```
+<!-- START_RELEASE_TABLE -->
+<!-- END_RELEASE_TABLE -->
