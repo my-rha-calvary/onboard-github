@@ -32,30 +32,34 @@ jobs:
           TABLE="| Repository | Latest Release |\n| :--- | :--- |\n"
 
           # Fetch repos starting with aws-tofu
-          REPOS=$(gh repo list "$ORG" --limit 100 --json name --jq '.[] | select(.name | startswith("rha-")) | .name')
+          REPOS=$(gh repo list "$ORG" --limit 100 --json name --jq '.[] | select(.name | startswith("aws-tofu")) | .name')
 
           for repo in $REPOS; do
             TAG=$(gh release view --repo "$ORG/$repo" --json tagName --jq '.tagName' 2>/dev/null || echo "No Release")
             TABLE="${TABLE}| [$repo](https://github.com/$ORG/$repo) | \`$TAG\` |\n"
           done
 
-          # Format for multi-line substitution
-          printf -v ESCAPED_TABLE "%s" "$TABLE"
+          # Export TABLE as an environment variable for Python
+          export TABLE
 
-          # Replace section between markers in README.md
-          python3 -c "
-          import re
-          with open('README.md', 'r') as f:
+          python3 -c '
+          import os, re
+
+          table_content = os.environ.get("TABLE", "")
+
+          with open("README.md", "r") as f:
               content = f.read()
+
           new_content = re.sub(
-              r'<!-- START_RELEASE_TABLE -->.*?<!-- END_RELEASE_TABLE -->',
-              f'<!-- START_RELEASE_TABLE -->\n{ESCAPED_TABLE}<!-- END_RELEASE_TABLE -->',
+              r"<!-- START_RELEASE_TABLE -->.*?<!-- END_RELEASE_TABLE -->",
+              f"<!-- START_RELEASE_TABLE -->\n{table_content}<!-- END_RELEASE_TABLE -->",
               content,
               flags=re.DOTALL
           )
-          with open('README.md', 'w') as f:
+
+          with open("README.md", "w") as f:
               f.write(new_content)
-          "
+          '
 
       - name: Commit and Push Changes
         run: |
