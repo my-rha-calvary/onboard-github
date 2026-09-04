@@ -29,22 +29,28 @@ jobs:
           ORG: ${{ github.repository_owner }}
         run: |
           python3 -c '
-          import os, re, subprocess
+          import os, re, json, base64, subprocess
 
           org = os.environ["ORG"]
 
           # 1. Fetch matching repos (starts with my-rha- or aws-tofu)
-          cmd_repos = f"gh repo list {org} --limit 200 --json name --jq \".[[] | select((.name | startswith(\\\"my-rha-\\\")) or (.name | startswith(\\\"aws-tofu\\\"))) | .name\""
-          repos = [r for r in subprocess.check_output(cmd_repos, shell=True, text=True).strip().splitlines() if r]
+          jq_filter = ".[] | select((.name | startswith(\"my-rha-\")) or (.name | startswith(\"aws-tofu\"))) | .name"
+          cmd_repos = ["gh", "repo", "list", org, "--limit", "200", "--json", "name", "--jq", jq_filter]
+          
+          try:
+              repos_out = subprocess.check_output(cmd_repos, text=True).strip()
+              repos = [r for r in repos_out.splitlines() if r]
+          except Exception as e:
+              print(f"Error listing repos: {e}")
+              repos = []
 
           table = "| Repository | Latest Release | Provider Requirements | Release Notes |\n| :--- | :--- | :--- | :--- |\n"
 
           for repo in repos:
               # 2. Get latest release tag and body
               try:
-                  cmd_rel = f"gh release view --repo {org}/{repo} --json tagName,body"
-                  rel_out = subprocess.check_output(cmd_rel, shell=True, text=True)
-                  import json
+                  cmd_rel = ["gh", "release", "view", "--repo", f"{org}/{repo}", "--json", "tagName,body"]
+                  rel_out = subprocess.check_output(cmd_rel, text=True)
                   rel_data = json.loads(rel_out)
                   tag = rel_data.get("tagName", "No Release")
                   raw_body = rel_data.get("body", "") or "N/A"
@@ -58,16 +64,14 @@ jobs:
               # 3. Read versions.tf content from the repo
               providers_str = "N/A"
               try:
-                  cmd_vtf = f"gh api repos/{org}/{repo}/contents/versions.tf --jq .content"
-                  b64_content = subprocess.check_output(cmd_vtf, shell=True, text=True).strip()
-                  import base64
+                  cmd_vtf = ["gh", "api", f"repos/{org}/{repo}/contents/versions.tf", "--jq", ".content"]
+                  b64_content = subprocess.check_output(cmd_vtf, text=True).strip()
                   vtf_content = base64.b64decode(b64_content).decode("utf-8")
 
                   # Extract required_providers block
                   req_match = re.search(r"required_providers\s*\{(.*?)\}", vtf_content, re.DOTALL)
                   if req_match:
                       block = req_match.group(1)
-                      # Parse provider = { source = "...", version = "..." } or simple key-value pairs
                       matches = re.findall(r"(\w+)\s*=\s*(?:\{[^}]*version\s*=\s*\"([^\"]+)\"|\"([^\"]+)\")", block)
                       prov_list = []
                       for m in matches:
