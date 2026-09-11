@@ -24,19 +24,20 @@ jobs:
           owner: ${{ github.repository_owner }}
 
       - name: Fetch Latest Releases and Update README
+        id: fetch_latest_releases
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           ORG: ${{ github.repository_owner }}
         run: |
-          python3 -c '
+          python3 << 'PYEOF'
           import os, re, json, subprocess
 
           org = os.environ["ORG"]
 
           # 1. Fetch matching repos (starts with my-rha- or aws-tofu)
-          jq_filter = ".[] | select((.name | startswith(\"my-rha-\")) or (.name | startswith(\"aws-tofu\"))) | .name"
+          jq_filter = '.[] | select((.name | startswith("my-rha-")) or (.name | startswith("aws-tofu"))) | .name'
           cmd_repos = ["gh", "repo", "list", org, "--limit", "200", "--json", "name", "--jq", jq_filter]
-          
+
           try:
               repos_out = subprocess.check_output(cmd_repos, text=True).strip()
               repos = [r for r in repos_out.splitlines() if r]
@@ -44,7 +45,8 @@ jobs:
               print(f"Error listing repos: {e}")
               repos = []
 
-          table = "| Repository | Latest Release | Release Notes |\n| :--- | :--- | :--- |\n"
+          rows = []
+          md_table = "| Repository | Latest Release | Release Notes |\n| :--- | :--- | :--- |\n"
 
           for repo in repos:
               # 2. Get latest release tag and body
@@ -54,14 +56,16 @@ jobs:
                   rel_data = json.loads(rel_out)
                   tag = rel_data.get("tagName", "No Release")
                   raw_body = rel_data.get("body", "") or "N/A"
-                  body = raw_body.replace("\r\n", " ").replace("\n", " ").replace("|", "\\|")
+                  body = raw_body.replace("\r\n", " ").replace("\n", " ")
                   if len(body) > 100:
                       body = body[:100] + "..."
               except Exception:
                   tag = "No Release"
                   body = "N/A"
 
-              table += f"| [{repo}](https://github.com/{org}/{repo}) | `{tag}` | {body} |\n"
+              url = f"https://github.com/{org}/{repo}"
+              md_table += f"| [{repo}]({url}) | `{tag}` | {body.replace('|', chr(92) + '|')} |\n"
+              rows.append((repo, url, tag, body))
 
           # 3. Update README.md
           with open("README.md", "r") as f:
@@ -69,14 +73,28 @@ jobs:
 
           new_content = re.sub(
               r"<!-- START_RELEASE_TABLE -->.*?<!-- END_RELEASE_TABLE -->",
-              f"<!-- START_RELEASE_TABLE -->\n{table}<!-- END_RELEASE_TABLE -->",
+              f"<!-- START_RELEASE_TABLE -->\n{md_table}<!-- END_RELEASE_TABLE -->",
               content,
               flags=re.DOTALL
           )
 
           with open("README.md", "w") as f:
               f.write(new_content)
-          '
+
+          # 4. Build Confluence Storage Format (XHTML) table
+          cf = "<table><tbody>"
+          cf += "<tr><th>Repository</th><th>Latest Release</th><th>Release Notes</th></tr>"
+          for repo, url, tag, body in rows:
+              cf += f'<tr><td><a href="{url}">{repo}</a></td><td><code>{tag}</code></td><td>{body}</td></tr>'
+          cf += "</tbody></table>"
+
+          # 5. Expose confluence_table as a step output
+          github_output = os.environ.get("GITHUB_OUTPUT", "")
+          if github_output:
+              with open(github_output, "a") as out:
+                  out.write(f"confluence_table={cf}\n")
+          PYEOF
+
 
       - name: Commit and Push Changes
         run: |
@@ -84,3 +102,42 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
           git diff --staged --quiet || (git commit -m "chore: update aws-tofu module release versions" && git push)
+      
+      - name: Update Confluence Page
+        env:
+          CONFLUENCE_BASE_URL: ${{ secrets.CONFLUENCE_BASE_URL }}
+          CONFLUENCE_USERNAME: ${{ secrets.CONFLUENCE_USERNAME }}
+          CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+          CONFLUENCE_PAGE_ID: ${{ secrets.CONFLUENCE_PAGE_ID }}
+          TABLE_CONTENT: ${{ steps.fetch_latest_releases.outputs.confluence_table }}
+        run: |
+          # Get the current page version (required for PUT)
+          PAGE_JSON=$(curl -s -u "$CONFLUENCE_USERNAME:$CONFLUENCE_API_TOKEN" \
+            "$CONFLUENCE_BASE_URL/rest/api/content/$CONFLUENCE_PAGE_ID?expand=version")
+          CURRENT_VERSION=$(echo "$PAGE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['version']['number'])")
+          NEXT_VERSION=$((CURRENT_VERSION + 1))
+          TITLE=$(echo "$PAGE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['title'])")
+
+          # Build the update payload
+          PAYLOAD=$(python3 -c "
+          import json, os
+          payload = {
+            'version': {'number': int(os.environ['NEXT_VERSION'])},
+            'title': os.environ['TITLE'],
+            'type': 'page',
+            'body': {
+              'storage': {
+                'value': os.environ['TABLE_CONTENT'],
+                'representation': 'storage'
+              }
+            }
+          }
+          print(json.dumps(payload))
+          " NEXT_VERSION="$NEXT_VERSION" TITLE="$TITLE" TABLE_CONTENT="$TABLE_CONTENT")
+
+          # Push the update to Confluence
+          curl -s -X PUT \
+            -u "$CONFLUENCE_USERNAME:$CONFLUENCE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "$CONFLUENCE_BASE_URL/rest/api/content/$CONFLUENCE_PAGE_ID"
