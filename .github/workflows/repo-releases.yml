@@ -12,9 +12,6 @@ jobs:
   update-readme:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v6
-
       - name: Generate GitHub App Token
         id: app-token
         uses: actions/create-github-app-token@v1
@@ -23,6 +20,11 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
       - name: Fetch Latest Releases and Update README
         id: fetch_latest_releases
         env:
@@ -30,7 +32,7 @@ jobs:
           ORG: ${{ github.repository_owner }}
         run: |
           python3 << 'PYEOF'
-          import os, re, json, subprocess
+          import os, re, json, html, subprocess
 
           org = os.environ["ORG"]
 
@@ -64,16 +66,17 @@ jobs:
                   body = "N/A"
 
               url = f"https://github.com/{org}/{repo}"
-              md_table += f"| [{repo}]({url}) | `{tag}` | {body.replace('|', chr(92) + '|')} |\n"
+              md_table += f"| [{repo}]({url}) | `{tag}` | {body.replace('|', r'\|')} |\n"
               rows.append((repo, url, tag, body))
 
           # 3. Update README.md
           with open("README.md", "r") as f:
               content = f.read()
 
+          replacement = f"<!-- START_RELEASE_TABLE -->\n{md_table}<!-- END_RELEASE_TABLE -->"
           new_content = re.sub(
               r"<!-- START_RELEASE_TABLE -->.*?<!-- END_RELEASE_TABLE -->",
-              f"<!-- START_RELEASE_TABLE -->\n{md_table}<!-- END_RELEASE_TABLE -->",
+              lambda m: replacement,
               content,
               flags=re.DOTALL
           )
@@ -85,16 +88,19 @@ jobs:
           cf = "<table><tbody>"
           cf += "<tr><th>Repository</th><th>Latest Release</th><th>Release Notes</th></tr>"
           for repo, url, tag, body in rows:
-              cf += f'<tr><td><a href="{url}">{repo}</a></td><td><code>{tag}</code></td><td>{body}</td></tr>'
+              safe_repo = html.escape(repo)
+              safe_url = html.escape(url)
+              safe_tag = html.escape(tag)
+              safe_body = html.escape(body)
+              cf += f'<tr><td><a href="{safe_url}">{safe_repo}</a></td><td><code>{safe_tag}</code></td><td>{safe_body}</td></tr>'
           cf += "</tbody></table>"
 
-          # 5. Expose confluence_table as a step output
+          # 5. Expose confluence_table as a step output using multiline format
           github_output = os.environ.get("GITHUB_OUTPUT", "")
           if github_output:
               with open(github_output, "a") as out:
-                  out.write(f"confluence_table={cf}\n")
+                  out.write(f"confluence_table<<EOF\n{cf}\nEOF\n")
           PYEOF
-
 
       - name: Commit and Push Changes
         run: |
@@ -102,7 +108,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
           git diff --staged --quiet || (git commit -m "chore: update aws-tofu module release versions" && git push)
-      
+
       - name: Update Confluence Page
         env:
           CONFLUENCE_BASE_URL: ${{ secrets.CONFLUENCE_BASE_URL }}
@@ -111,51 +117,47 @@ jobs:
           CONFLUENCE_PAGE_ID: ${{ secrets.CONFLUENCE_PAGE_ID }}
           TABLE_CONTENT: ${{ steps.fetch_latest_releases.outputs.confluence_table }}
         run: |
-          # Get the current page version (required for PUT)
+          # Fetch Confluence page info
           echo "Fetching Confluence page: $CONFLUENCE_BASE_URL/rest/api/content/$CONFLUENCE_PAGE_ID"
           HTTP_STATUS=$(curl -s -o /tmp/cf_response.json -w "%{http_code}" \
             -u "$CONFLUENCE_USERNAME:$CONFLUENCE_API_TOKEN" \
             "$CONFLUENCE_BASE_URL/rest/api/content/$CONFLUENCE_PAGE_ID?expand=version")
+          
           PAGE_JSON=$(cat /tmp/cf_response.json)
           echo "Confluence API HTTP status: $HTTP_STATUS"
-          echo "Confluence API response: $PAGE_JSON"
 
           if [ "$HTTP_STATUS" != "200" ]; then
             echo "ERROR: Confluence API returned HTTP $HTTP_STATUS"
+            echo "Response: $PAGE_JSON"
             exit 1
           fi
 
-          # Extract version + title
-          CURRENT_VERSION=$(echo "$PAGE_JSON" | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          if 'version' not in data:
-              print('ERROR: No version key in response:', data, file=sys.stderr)
-              sys.exit(1)
-          print(data['version']['number'])
-          ")
-          TITLE=$(echo "$PAGE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['title'])")
+          # Parse current version and title safely
+          export PAGE_JSON
+          CURRENT_VERSION=$(python3 -c "import os, json; print(json.loads(os.environ['PAGE_JSON'])['version']['number'])")
+          TITLE=$(python3 -c "import os, json; print(json.loads(os.environ['PAGE_JSON'])['title'])")
           NEXT_VERSION=$((CURRENT_VERSION + 1))
 
-          # Build the update payload
-          PAYLOAD=$(python3 << PYEOF
-import json
-payload = {
-  "version": {"number": $NEXT_VERSION},
-  "title": "$TITLE",
-  "type": "page",
-  "body": {
-    "storage": {
-      "value": """$TABLE_CONTENT""",
-      "representation": "storage"
-    }
-  }
-}
-print(json.dumps(payload))
-PYEOF
-)
+          export NEXT_VERSION TITLE
 
-          # Push the update to Confluence
+          # Build JSON payload using Python environment variables
+          PAYLOAD=$(python3 -c '
+          import os, json
+          payload = {
+            "version": {"number": int(os.environ["NEXT_VERSION"])},
+            "title": os.environ["TITLE"],
+            "type": "page",
+            "body": {
+              "storage": {
+                "value": os.environ["TABLE_CONTENT"],
+                "representation": "storage"
+              }
+            }
+          }
+          print(json.dumps(payload))
+          ')
+
+          # Push update to Confluence
           curl -s -X PUT \
             -u "$CONFLUENCE_USERNAME:$CONFLUENCE_API_TOKEN" \
             -H "Content-Type: application/json" \
