@@ -28,34 +28,55 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           ORG: ${{ github.repository_owner }}
         run: |
-          # Generate Markdown Table Header
-          TABLE="| Repository | Latest Release |\n| :--- | :--- |\n"
+          python3 -c '
+          import os, re, json, subprocess
 
-          # Fetch repos starting with aws-tofu
-          REPOS=$(gh repo list "$ORG" --limit 100 --json name --jq '.[] | select(.name | startswith("rha-")) | .name')
+          org = os.environ["ORG"]
 
-          for repo in $REPOS; do
-            TAG=$(gh release view --repo "$ORG/$repo" --json tagName --jq '.tagName' 2>/dev/null || echo "No Release")
-            TABLE="${TABLE}| [$repo](https://github.com/$ORG/$repo) | \`$TAG\` |\n"
-          done
+          # 1. Fetch matching repos (starts with my-rha- or aws-tofu)
+          jq_filter = ".[] | select((.name | startswith(\"my-rha-\")) or (.name | startswith(\"aws-tofu\"))) | .name"
+          cmd_repos = ["gh", "repo", "list", org, "--limit", "200", "--json", "name", "--jq", jq_filter]
+          
+          try:
+              repos_out = subprocess.check_output(cmd_repos, text=True).strip()
+              repos = [r for r in repos_out.splitlines() if r]
+          except Exception as e:
+              print(f"Error listing repos: {e}")
+              repos = []
 
-          # Format for multi-line substitution
-          printf -v ESCAPED_TABLE "%s" "$TABLE"
+          table = "| Repository | Latest Release | Release Notes |\n| :--- | :--- | :--- |\n"
 
-          # Replace section between markers in README.md
-          python3 -c "
-          import re
-          with open('README.md', 'r') as f:
+          for repo in repos:
+              # 2. Get latest release tag and body
+              try:
+                  cmd_rel = ["gh", "release", "view", "--repo", f"{org}/{repo}", "--json", "tagName,body"]
+                  rel_out = subprocess.check_output(cmd_rel, text=True)
+                  rel_data = json.loads(rel_out)
+                  tag = rel_data.get("tagName", "No Release")
+                  raw_body = rel_data.get("body", "") or "N/A"
+                  body = raw_body.replace("\r\n", " ").replace("\n", " ").replace("|", "\\|")
+                  if len(body) > 100:
+                      body = body[:100] + "..."
+              except Exception:
+                  tag = "No Release"
+                  body = "N/A"
+
+              table += f"| [{repo}](https://github.com/{org}/{repo}) | `{tag}` | {body} |\n"
+
+          # 3. Update README.md
+          with open("README.md", "r") as f:
               content = f.read()
+
           new_content = re.sub(
-              r'<!-- START_RELEASE_TABLE -->.*?<!-- END_RELEASE_TABLE -->',
-              f'<!-- START_RELEASE_TABLE -->\n{ESCAPED_TABLE}<!-- END_RELEASE_TABLE -->',
+              r"<!-- START_RELEASE_TABLE -->.*?<!-- END_RELEASE_TABLE -->",
+              f"<!-- START_RELEASE_TABLE -->\n{table}<!-- END_RELEASE_TABLE -->",
               content,
               flags=re.DOTALL
           )
-          with open('README.md', 'w') as f:
+
+          with open("README.md", "w") as f:
               f.write(new_content)
-          "
+          '
 
       - name: Commit and Push Changes
         run: |
