@@ -112,16 +112,25 @@ jobs:
           TABLE_CONTENT: ${{ steps.fetch_latest_releases.outputs.confluence_table }}
         run: |
           # Get the current page version (required for PUT)
-          PAGE_JSON=$(curl -s -u "$CONFLUENCE_USERNAME:$CONFLUENCE_API_TOKEN" \
+          echo "Fetching Confluence page: $CONFLUENCE_BASE_URL/rest/api/content/$CONFLUENCE_PAGE_ID"
+          HTTP_STATUS=$(curl -s -o /tmp/cf_response.json -w "%{http_code}" \
+            -u "$CONFLUENCE_USERNAME:$CONFLUENCE_API_TOKEN" \
             "$CONFLUENCE_BASE_URL/rest/api/content/$CONFLUENCE_PAGE_ID?expand=version")
+          PAGE_JSON=$(cat /tmp/cf_response.json)
+          echo "Confluence API HTTP status: $HTTP_STATUS"
+          echo "Confluence API response: $PAGE_JSON"
 
-          # Validate the response and extract version + title
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "ERROR: Confluence API returned HTTP $HTTP_STATUS"
+            exit 1
+          fi
+
+          # Extract version + title
           CURRENT_VERSION=$(echo "$PAGE_JSON" | python3 -c "
           import sys, json
           data = json.load(sys.stdin)
           if 'version' not in data:
-              print('ERROR: Confluence API did not return a page object. Response was:', file=sys.stderr)
-              print(data, file=sys.stderr)
+              print('ERROR: No version key in response:', data, file=sys.stderr)
               sys.exit(1)
           print(data['version']['number'])
           ")
@@ -129,21 +138,22 @@ jobs:
           NEXT_VERSION=$((CURRENT_VERSION + 1))
 
           # Build the update payload
-          PAYLOAD=$(python3 -c "
-          import json, os
-          payload = {
-            'version': {'number': int(os.environ['NEXT_VERSION'])},
-            'title': os.environ['TITLE'],
-            'type': 'page',
-            'body': {
-              'storage': {
-                'value': os.environ['TABLE_CONTENT'],
-                'representation': 'storage'
-              }
-            }
-          }
-          print(json.dumps(payload))
-          " NEXT_VERSION="$NEXT_VERSION" TITLE="$TITLE" TABLE_CONTENT="$TABLE_CONTENT")
+          PAYLOAD=$(python3 << PYEOF
+import json
+payload = {
+  "version": {"number": $NEXT_VERSION},
+  "title": "$TITLE",
+  "type": "page",
+  "body": {
+    "storage": {
+      "value": """$TABLE_CONTENT""",
+      "representation": "storage"
+    }
+  }
+}
+print(json.dumps(payload))
+PYEOF
+)
 
           # Push the update to Confluence
           curl -s -X PUT \
