@@ -244,7 +244,7 @@ pre-commit run --all-files
 <!-- START_RELEASE_TABLE -->
 | Repository | Latest Release | Release Notes |
 | :--- | :--- | :--- |
-| [my-rha-test-1](https://github.com/my-rha-calvary/my-rha-test-1) | `v1.0.0` | ## What's Changed * add readme by @rha-calvary in https://github.com/my-rha-calvary/my-rha-test-1/pu... |
+| [my-rha-test-1](https://github.com/my-rha-calvary/my-rha-test-1) | `v1.0.1` | New release |
 | [my-rha-test-2](https://github.com/my-rha-calvary/my-rha-test-2) | `v1.0.0` | ## What's Changed * feat: add new release by @rha-calvary in https://github.com/my-rha-calvary/my-rh... |
 | [my-rha-test-3](https://github.com/my-rha-calvary/my-rha-test-3) | `No Release` | N/A |
 <!-- END_RELEASE_TABLE -->
