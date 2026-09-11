@@ -114,9 +114,19 @@ jobs:
           # Get the current page version (required for PUT)
           PAGE_JSON=$(curl -s -u "$CONFLUENCE_USERNAME:$CONFLUENCE_API_TOKEN" \
             "$CONFLUENCE_BASE_URL/rest/api/content/$CONFLUENCE_PAGE_ID?expand=version")
-          CURRENT_VERSION=$(echo "$PAGE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['version']['number'])")
-          NEXT_VERSION=$((CURRENT_VERSION + 1))
+
+          # Validate the response and extract version + title
+          CURRENT_VERSION=$(echo "$PAGE_JSON" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          if 'version' not in data:
+              print('ERROR: Confluence API did not return a page object. Response was:', file=sys.stderr)
+              print(data, file=sys.stderr)
+              sys.exit(1)
+          print(data['version']['number'])
+          ")
           TITLE=$(echo "$PAGE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['title'])")
+          NEXT_VERSION=$((CURRENT_VERSION + 1))
 
           # Build the update payload
           PAYLOAD=$(python3 -c "
